@@ -1,4 +1,4 @@
-#rtd - local-first cli todo list manager written in Rust.
+# rtd - local-first cli todo list manager written in Rust.
 
 rtd projects are just markdown files and folders. A folder can have as many nested folders as you want. This is your GTD system now.
 
