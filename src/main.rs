@@ -1,5 +1,6 @@
 use std::fs::{self};
 use std::io::{Write};
+use std::time::Instant;
 use homedir::get_my_home;
 use std::path::Path;
 use clap::Parser;
@@ -10,7 +11,14 @@ const RTD_ROOT_VAR_NAME: &str = "RTD_ROOT";
 
 #[derive(Parser)]
 struct Cli {
-    command: String
+    command: String,
+}
+
+struct Task {
+    id: i32,
+    title: String,
+    date: Instant,
+    labels: Vec<String>,
 }
 
 fn visit_dirs(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
