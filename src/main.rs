@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let contents = fs::read_to_string(config_path.join(CONFIG_FNAME)).expect("");
 
         println!("{contents}");
-        let line: Vec<_> = contents.split("=").collect();
+        let line: Vec<_> = contents.split('=').collect();
         if line[0] != RTD_ROOT_VAR_NAME {
             println!("You need to have {RTD_ROOT_VAR_NAME}=<absolute_path> in the config.");
         }
@@ -26,9 +26,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let root_path =  Path::new(rtd_root);
         let inbox_path =  root_path.join(INBOX_FNAME);
-        if !root_path.join(INBOX_FNAME).exists() {
+        if !inbox_path.exists() {
             println!("There is no {INBOX_FNAME} file in the root. Creating...");
-            let mut f = fs::File::create(root_path.join(INBOX_FNAME))?;
+            let mut f = fs::File::create(inbox_path)?;
             f.write_all("".as_bytes())?;
         }
     } else {
