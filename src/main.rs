@@ -1,6 +1,7 @@
 use std::fs::{self};
 use std::io::{Write};
-use std::time::Instant;
+// use std::time::Instant;
+use std::io::{BufRead, BufReader};
 use homedir::get_my_home;
 use std::path::Path;
 use clap::Parser;
@@ -8,6 +9,8 @@ use clap::Parser;
 const CONFIG_FNAME: &str = ".rtd";
 const INBOX_FNAME: &str = "inbox.md";
 const RTD_ROOT_VAR_NAME: &str = "RTD_ROOT";
+const TASK_UNDONE: &str = "- [ ]";
+const TASK_DONE: &str = "- [x]";
 
 #[derive(Parser)]
 struct Cli {
@@ -17,12 +20,24 @@ struct Cli {
 struct Task {
     id: i32,
     title: String,
-    date: Instant,
-    labels: Vec<String>,
+    // date: Instant,
+    // labels: Vec<String>,
+}
+
+fn parse_task(line: &str) -> Option<Task> {
+    // check that line starts with TASK_UNDONE or TASK_DONE
+    // if yes, put the rest into title for now
+    if line.starts_with(TASK_DONE) || line.starts_with(TASK_UNDONE) {
+        let task = Task {id: 0, title:line.to_string()};
+        Some(task)
+    } else {
+        None
+    }
 }
 
 fn visit_dirs(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Modified from the official doc: https://doc.rust-lang.org/std/fs/fn.read_dir.html.
+    // TODO: omit the root prefix.
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -56,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let inbox_path =  root_path.join(INBOX_FNAME);
         if !inbox_path.exists() {
             println!("There is no {INBOX_FNAME} file in the root. Creating...");
-            let mut f = fs::File::create(inbox_path)?;
+            let mut f = fs::File::create(inbox_path.clone())?;
             f.write_all("".as_bytes())?;
         }
         // Initialisation ends 
@@ -65,7 +80,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if args.command == "list" {
             println!("All gtd projects:");
             let _ = visit_dirs(root_path);
-        } 
+        } else if args.command == "show" {
+            let file = fs::File::open(inbox_path).unwrap();
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                let line = line.unwrap();
+                // Show the line and its number.
+                let task = parse_task(&line).unwrap();
+                println!("{}: {}", task.id, task.title);
+}
+        };
 
 
     } else {
