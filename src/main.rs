@@ -15,6 +15,7 @@ const TASK_DONE: &str = "- [x]";
 #[derive(Parser)]
 struct Cli {
     command: String,
+    modifier: Option<String>,
 }
 
 struct Task {
@@ -35,23 +36,25 @@ fn parse_task(line: &str) -> Option<Task> {
     }
 }
 
-fn visit_dirs(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    // Modified from the official doc: https://doc.rust-lang.org/std/fs/fn.read_dir.html.
-    // TODO: omit the root prefix.
+fn get_all_files(dir: &Path) -> Vec<String> {
+    let mut all_files: Vec<String> = Vec::new();
     if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                visit_dirs(&path)?;
-            } else {
-                println!("{}", path.to_str().expect(""));
+        let mut dirs = Vec::new();
+        dirs.push(dir.to_path_buf());
+        while let Some(current_dir) = dirs.pop() {
+            for entry in fs::read_dir(current_dir).expect("").flatten() {
+                let path = entry.path().to_owned();
+                if path.is_dir() {
+                    dirs.push(path);
+                } else {
+                    all_files.push(path.to_str().expect("").to_string());
+                }
             }
         }
     }
-    Ok(())
+    all_files
 }
-// fn main() {
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // I have no idea what's going on and why we need to unwrap twice.
     // I am also surprised that to get your home directory, you need a crate.
@@ -79,17 +82,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let args = Cli::parse();
         if args.command == "list" {
             println!("All gtd projects:");
-            let _ = visit_dirs(root_path);
+            for fname in get_all_files(root_path) {
+                println!("{fname}");
+            }
+
         } else if args.command == "show" {
-            let file = fs::File::open(inbox_path).unwrap();
-            let reader = BufReader::new(file);
-            for line in reader.lines() {
-                let line = line.unwrap();
-                // Show the line and its number.
-                let task = parse_task(&line).unwrap();
-                println!("{}: {}", task.id, task.title);
-}
-        };
+            if args.modifier.is_none() {
+                let file = fs::File::open(inbox_path).unwrap();
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    let line = line.unwrap();
+                    // Show the line and its number.
+                    let task = parse_task(&line).unwrap();
+                    println!("{}: {}", task.id, task.title);
+                }
+            } else if args.modifier.expect("") == "all" {
+                    println!("Showing all todos.")
+            }
+        }
 
 
     } else {
