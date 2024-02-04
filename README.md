@@ -18,12 +18,12 @@ RTD_ROOT/learning/watch.md
 ## Roadmap
 - [x] Print out the inbox content.
 - [x] Print out all todos in the root recursively.
-- [ ] Print out todos for a particular file.
-- [ ] Print out todos for a particular folder, including the root.
+- [x] Print out todos for a particular file.
+- [x] Print out todos for a particular folder, including the root.
+- [ ] Toggle todo status (moved to #Done section of the list, and back to the end of the not-done section.)
+- [ ] Add date support (e.g. !YYYY-MM-DD)
 - [ ] Print out todos for today based on the date.
 - [ ] Add todo to a particular project.
-- [ ] Toggle todo status (moved to #Done section of the list, and back to the end of the not-done section.)
 - [ ] Add label support (e.g. @next)
-- [ ] Add date support (e.g. !YYYY-MM-DD)
 - [ ] Add the description support. (e.g. $this is a comment)
 - [ ] Support recurrent tasks.

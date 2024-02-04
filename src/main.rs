@@ -107,11 +107,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
         } else if args.command == "show" {
-            if args.modifier.is_none() {
+            let modifier_value = args.modifier.clone();
+            if modifier_value.is_none() {
                 show_file_tasks(&inbox_path);
-            } else if args.modifier.expect("") == "all" {
+            } else if modifier_value.clone().expect("") == "all" {
                 for fpath in get_all_files(root_path) {
                     show_file_tasks(&fpath);
+                }
+            } else {
+                // When we are here, we either get a folder name, or a file name.
+                let mod_path = root_path.join(modifier_value.clone().expect(""));
+                if modifier_value.clone().expect("").ends_with(".md") {
+                    show_file_tasks(&mod_path);
+                } else {
+                    for fpath in get_all_files(&mod_path) {
+                        show_file_tasks(&fpath);
+                    }
                 }
             }
         }
