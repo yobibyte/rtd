@@ -1,9 +1,8 @@
 use std::fs::{self};
-use std::io::{Write};
 // use std::time::Instant;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use homedir::get_my_home;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use clap::Parser;
 
 const CONFIG_FNAME: &str = ".rtd";
@@ -36,8 +35,29 @@ fn parse_task(line: &str) -> Option<Task> {
     }
 }
 
-fn get_all_files(dir: &Path) -> Vec<String> {
-    let mut all_files: Vec<String> = Vec::new();
+fn get_file_tasks(fname: &Path) -> Vec<Task> {
+    let file = fs::File::open(fname).unwrap();
+    let mut file_tasks = Vec::new();
+    let reader = BufReader::new(file);
+    for line in reader.lines() {
+        let line = line.unwrap();
+        if let Some(task) = parse_task(&line) {
+            file_tasks.push(task);
+        }
+    }
+    file_tasks
+}
+
+fn show_file_tasks(fname: &Path) {
+    println!("####### {} #######", fname.to_str().expect(""));
+    let file_tasks = get_file_tasks(fname);
+    for task in file_tasks{
+        println!("{}: {}", task.id, task.title);
+    }
+}
+
+fn get_all_files(dir: &Path) -> Vec<PathBuf> {
+    let mut all_files: Vec<PathBuf> = Vec::new();
     if dir.is_dir() {
         let mut dirs = Vec::new();
         dirs.push(dir.to_path_buf());
@@ -47,7 +67,7 @@ fn get_all_files(dir: &Path) -> Vec<String> {
                 if path.is_dir() {
                     dirs.push(path);
                 } else {
-                    all_files.push(path.to_str().expect("").to_string());
+                    all_files.push(path);
                 }
             }
         }
@@ -61,7 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_path = get_my_home().unwrap().unwrap();
     if config_path.exists() {
         // Initialisation starts
-        // When config will grow, we'll need to read file line by line.
+        // When config grows, we'll need to read file line by line.
         let contents = fs::read_to_string(config_path.join(CONFIG_FNAME)).expect("");
         let line: Vec<_> = contents.split('=').collect();
         if line[0] != RTD_ROOT_VAR_NAME {
@@ -82,22 +102,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let args = Cli::parse();
         if args.command == "list" {
             println!("All gtd projects:");
-            for fname in get_all_files(root_path) {
-                println!("{fname}");
+            for fpath in get_all_files(root_path) {
+                println!("{}", fpath.to_str().expect(""));
             }
 
         } else if args.command == "show" {
             if args.modifier.is_none() {
-                let file = fs::File::open(inbox_path).unwrap();
-                let reader = BufReader::new(file);
-                for line in reader.lines() {
-                    let line = line.unwrap();
-                    // Show the line and its number.
-                    let task = parse_task(&line).unwrap();
-                    println!("{}: {}", task.id, task.title);
-                }
+                show_file_tasks(&inbox_path);
             } else if args.modifier.expect("") == "all" {
-                    println!("Showing all todos.")
+                for fpath in get_all_files(root_path) {
+                    show_file_tasks(&fpath);
+                }
             }
         }
 

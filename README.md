@@ -17,6 +17,7 @@ RTD_ROOT/learning/watch.md
 
 ## Roadmap
 - [x] Print out the inbox content.
+- [x] Print out all todos in the root recursively.
 - [ ] Print out todos for a particular file.
 - [ ] Print out todos for a particular folder, including the root.
 - [ ] Print out todos for today based on the date.
