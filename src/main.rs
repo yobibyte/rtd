@@ -11,6 +11,9 @@ const RTD_ROOT_VAR_NAME: &str = "RTD_ROOT";
 const TASK_UNDONE: &str = "- [ ]";
 const TASK_DONE: &str = "- [x]";
 
+//TODO: add init function that goes over all files
+//and sets ids for all the tasks if they are missing.
+
 #[derive(Parser)]
 struct Cli {
     command: String,
@@ -18,6 +21,7 @@ struct Cli {
 }
 
 struct Task {
+    is_done: bool,
     id: i32,
     title: String,
     // date: Instant,
@@ -28,11 +32,28 @@ fn parse_task(line: &str) -> Option<Task> {
     // check that line starts with TASK_UNDONE or TASK_DONE
     // if yes, put the rest into title for now
     if line.starts_with(TASK_DONE) || line.starts_with(TASK_UNDONE) {
-        let task = Task {id: 0, title:line.to_string()};
+        let mut line_to_parse = line;
+        let status = line_to_parse.starts_with(TASK_DONE);
+        //TODO: replace this by taking the length of the TASK_DONE/UNDONE.
+        //otherwise, it will fail when these two are changed, though this is unlikely.
+        line_to_parse = &line_to_parse[5..];
+        let mut split_string = line_to_parse.split_whitespace();
+        let potential_id = split_string.next()?;
+        let mut id = -1;
+        if potential_id.starts_with('&') {
+            id = (&potential_id[1..]).parse().unwrap();
+        }             
+        
+        let task = Task {id, title:line_to_parse.to_string(), is_done: status};
         Some(task)
     } else {
         None
     }
+}
+
+fn task_to_string(task: &Task) -> String{
+    let status_string = if task.is_done {TASK_DONE} else {TASK_UNDONE}; 
+    format!("{} ${} {}", status_string, task.id, task.title)
 }
 
 fn get_file_tasks(fname: &Path) -> Vec<Task> {
@@ -52,7 +73,7 @@ fn show_file_tasks(fname: &Path) {
     println!("####### {} #######", fname.to_str().expect(""));
     let file_tasks = get_file_tasks(fname);
     for task in file_tasks{
-        println!("{}: {}", task.id, task.title);
+        println!("{}", task_to_string(&task));
     }
 }
 
@@ -74,6 +95,23 @@ fn get_all_files(dir: &Path) -> Vec<PathBuf> {
     }
     all_files
 }
+
+struct TaskStats {
+   max_id: i32, 
+}
+
+fn initialise(root_path: &Path) -> TaskStats {
+    let mut stats = TaskStats{max_id:0};
+    for fpath in get_all_files(root_path) {
+        let ftasks = get_file_tasks(&fpath);
+        for t in ftasks {
+            stats.max_id = std::cmp::max(t.id, stats.max_id);
+        }
+    }
+    stats
+}
+
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // I have no idea what's going on and why we need to unwrap twice.
@@ -97,6 +135,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut f = fs::File::create(inbox_path.clone())?;
             f.write_all("".as_bytes())?;
         }
+        let root_stats = initialise(root_path);
+        println!("{}", root_stats.max_id);
         // Initialisation ends 
 
         let args = Cli::parse();
