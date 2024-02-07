@@ -142,7 +142,27 @@ fn initialise(root_path: &Path) -> TaskStats {
     stats
 }
 
-
+fn toggle_task(task_id: i32, root_path: &Path) {
+    for fpath in get_all_files(root_path) {
+        let content = fs::read_to_string(&fpath).expect("Can't read the file");
+        let lines: Vec<_> = content.lines().collect();
+        let of = File::create(fpath).unwrap();
+        let mut writer = BufWriter::new(&of);
+        for l in lines {
+            if let Some(mut task) = parse_task(l) {
+                if task.id == task_id {
+                    task.is_done = !task.is_done;
+                }
+                writeln!(writer, "{}", task_to_string(&task)).unwrap();
+            }
+            else {
+                writeln!(writer, "{}", l).unwrap();
+            }
+        }
+    }
+    // todo: optimise and quit when found a task
+    // print if task was not found
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // I have no idea what's going on and why we need to unwrap twice.
@@ -196,8 +216,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-        }
+        } else if args.command == "toggle" {
+            let modifier_value = args.modifier.clone();
+            if modifier_value.is_some() {
+                let id: i32 = modifier_value.expect("Can't parse task id to toggle.").parse().unwrap();
+                toggle_task(id, root_path)
+            }
 
+        }
 
     } else {
         println!("You need to create a config at ~/{CONFIG_FNAME} and add GTD_DIR=<rtd_root_dir_absolute_path> there.");
