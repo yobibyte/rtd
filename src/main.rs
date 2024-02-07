@@ -1,6 +1,6 @@
-use std::fs::{self};
+use std::fs::{self, File};
 // use std::time::Instant;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Write, BufWriter};
 use homedir::get_my_home;
 use std::path::{Path, PathBuf};
 use clap::Parser;
@@ -10,9 +10,6 @@ const INBOX_FNAME: &str = "inbox.md";
 const RTD_ROOT_VAR_NAME: &str = "RTD_ROOT";
 const TASK_UNDONE: &str = "- [ ]";
 const TASK_DONE: &str = "- [x]";
-
-//TODO: add init function that goes over all files
-//and sets ids for all the tasks if they are missing.
 
 #[derive(Parser)]
 struct Cli {
@@ -27,6 +24,8 @@ struct Task {
     // date: Instant,
     // labels: Vec<String>,
 }
+
+//TODO check url without text tasks.
 
 fn parse_task(line: &str) -> Option<Task> {
     // check that line starts with TASK_UNDONE or TASK_DONE
@@ -44,20 +43,21 @@ fn parse_task(line: &str) -> Option<Task> {
             id = (&potential_id[1..]).parse().unwrap();
         }             
         
-        let task = Task {id, title:line_to_parse.to_string(), is_done: status};
+        let task = Task {id, title:split_string.collect::<Vec<&str>>().join(" "), is_done: status};
         Some(task)
     } else {
         None
     }
 }
 
-fn task_to_string(task: &Task) -> String{
+fn task_to_string(task: &Task) -> String {
     let status_string = if task.is_done {TASK_DONE} else {TASK_UNDONE}; 
-    format!("{} ${} {}", status_string, task.id, task.title)
+    let id_field = format!("&{}", task.id);
+    format!("{} {:8} {}", status_string, id_field, task.title)
 }
 
 fn get_file_tasks(fname: &Path) -> Vec<Task> {
-    let file = fs::File::open(fname).unwrap();
+    let file = File::open(fname).unwrap();
     let mut file_tasks = Vec::new();
     let reader = BufReader::new(file);
     for line in reader.lines() {
@@ -108,6 +108,34 @@ fn initialise(root_path: &Path) -> TaskStats {
             stats.max_id = std::cmp::max(t.id, stats.max_id);
         }
     }
+
+    // TODO: go through the tasks and set ids if not set.
+    // Go through all the files and replace task lines with modified.
+    // Leave non-task lines untouched.
+    for fpath in get_all_files(root_path) {
+        let content = fs::read_to_string(&fpath).expect("Can't read the file");
+        let lines: Vec<_> = content.lines().collect();
+        let of = File::create(fpath).unwrap();
+        let mut writer = BufWriter::new(&of);
+        for l in lines {
+            if let Some(mut task) = parse_task(&l) {
+                if task.id < 0 {
+                    task.id = stats.max_id+1;
+                    stats.max_id+=1;
+                }
+                writeln!(writer, "{}", task_to_string(&task)).unwrap();
+                // println!("{}", task_to_string(&task));
+                // println!("{}", task.id);
+                // writeln!(writer, "{}", l).unwrap();
+            }
+            else {
+                writeln!(writer, "{}", l).unwrap();
+            }
+        }
+         
+    }
+    
+    // TODO: if there are duplicates, fix that by setting them to max_number+1 etc.
     stats
 }
 
