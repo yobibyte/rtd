@@ -1,6 +1,7 @@
 use std::fs::{self, File};
 // use std::time::Instant;
 use std::io::{BufRead, BufReader, Write, BufWriter};
+use std::collections::HashSet;
 use homedir::get_my_home;
 use std::path::{Path, PathBuf};
 use clap::Parser;
@@ -40,7 +41,7 @@ fn parse_task(line: &str) -> Option<Task> {
         let potential_id = split_string.next()?;
         let mut id = -1;
         if potential_id.starts_with('&') {
-            id = (&potential_id[1..]).parse().unwrap();
+            id = (potential_id.strip_prefix('&'))?.parse().unwrap();
         }             
         
         let task = Task {id, title:split_string.collect::<Vec<&str>>().join(" "), is_done: status};
@@ -112,17 +113,19 @@ fn initialise(root_path: &Path) -> TaskStats {
     // TODO: go through the tasks and set ids if not set.
     // Go through all the files and replace task lines with modified.
     // Leave non-task lines untouched.
+    let mut ids: HashSet<i32> = HashSet::new();
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
         let lines: Vec<_> = content.lines().collect();
         let of = File::create(fpath).unwrap();
         let mut writer = BufWriter::new(&of);
         for l in lines {
-            if let Some(mut task) = parse_task(&l) {
-                if task.id < 0 {
+            if let Some(mut task) = parse_task(l) {
+                if task.id < 0 && ids.contains(&task.id){
                     task.id = stats.max_id+1;
                     stats.max_id+=1;
                 }
+                ids.insert(task.id);
                 writeln!(writer, "{}", task_to_string(&task)).unwrap();
                 // println!("{}", task_to_string(&task));
                 // println!("{}", task.id);
