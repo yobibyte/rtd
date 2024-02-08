@@ -20,11 +20,13 @@ RTD_ROOT/learning/watch.md
 - [x] Print out all todos in the root recursively.
 - [x] Print out todos for a particular file.
 - [x] Print out todos for a particular folder, including the root.
-- [ ] Toggle todo status 
-- [ ] Move done task to #Done section of the list, and back to the end of the not-done section.
-- [ ] Add date support (e.g. !YYYY-MM-DD)
+- [x] Toggle todo status 
+- [x] Add todo to a particular project.
+- [ ] Cleanup exception handling.
+- [ ] Add proper documentation.
+- [ ] Add date support (e.g. !YYYY-MM-DD).
+- [ ] Add label support (e.g. @next).
 - [ ] Print out todos for today based on the date.
-- [ ] Add todo to a particular project.
-- [ ] Add label support (e.g. @next)
 - [ ] Add the description support. (e.g. $this is a comment)
+- [ ] Move done task to #Done section of the list, and back to the end of the not-done section.
 - [ ] Support recurrent tasks.

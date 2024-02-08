@@ -16,6 +16,7 @@ const TASK_DONE: &str = "- [x]";
 struct Cli {
     command: String,
     modifier: Option<String>,
+    submodifier: Option<String>,
 }
 
 struct Task {
@@ -38,11 +39,15 @@ fn parse_task(line: &str) -> Option<Task> {
         let mut split_string = line_to_parse.split_whitespace();
         let potential_id = split_string.next()?;
         let mut id = -1;
+        let mut split_string_vec = split_string.clone().collect::<Vec<&str>>();
         if potential_id.starts_with('&') {
             id = (potential_id.strip_prefix('&'))?.parse().unwrap();
-        }             
+        } else {
+            split_string_vec.insert(0, potential_id);
+        }
         
-        let task = Task {id, title:split_string.collect::<Vec<&str>>().join(" "), is_done: status};
+        let task = Task {id, title:split_string_vec.join(" "), is_done: status};
+        // let task = Task {id, title:split_string.collect::<Vec<&str>>().join(" "), is_done: status};
         Some(task)
     } else {
         None
@@ -160,9 +165,9 @@ fn remove_task(task_id: i32, root_path: &Path) {
     // print if task was not found
 }
 
-fn add_task(task_str: &String, fpath: &Path, mut stats: TaskStats) {
+fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
 
-    let content = fs::read_to_string(&fpath).expect("Can't read the file");
+    let content = fs::read_to_string(fpath).expect("Can't read the file");
     let lines: Vec<_> = content.lines().collect();
     let of = File::create(fpath).unwrap();
     let mut writer = BufWriter::new(&of);
@@ -173,6 +178,8 @@ fn add_task(task_str: &String, fpath: &Path, mut stats: TaskStats) {
     let mut task_to_write = parse_task(&task_string).unwrap();
     task_to_write.id = stats.max_id+1;
     stats.max_id+=1;
+    println!("Added new task to {}:", fpath.to_str().unwrap());
+    println!("{}", task_to_string(&task_to_write));
     writeln!(writer, "{}", task_to_string(&task_to_write)).unwrap();
     for l in lines {
         writeln!(writer, "{}", l).unwrap();
@@ -267,7 +274,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if args.command == "add" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
-                add_task(&modifier_value.unwrap(), &inbox_path, root_stats);
+                let submodifier_value = args.submodifier.clone();
+                if submodifier_value.is_some() {
+                    let fpath = root_path.join(submodifier_value.unwrap());
+                    add_task(&modifier_value.unwrap(), &fpath, root_stats);
+                } else {
+                    add_task(&modifier_value.unwrap(), &inbox_path, root_stats);
+                }
+            } else {
+                println!("Specify a task to add!");
             }
         }
 
