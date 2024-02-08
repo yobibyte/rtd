@@ -160,6 +160,25 @@ fn remove_task(task_id: i32, root_path: &Path) {
     // print if task was not found
 }
 
+fn add_task(task_str: &String, fpath: &Path, mut stats: TaskStats) {
+
+    let content = fs::read_to_string(&fpath).expect("Can't read the file");
+    let lines: Vec<_> = content.lines().collect();
+    let of = File::create(fpath).unwrap();
+    let mut writer = BufWriter::new(&of);
+    //todo append status string here
+    let mut task_string = String::from(TASK_UNDONE);
+    task_string.push(' ');
+    task_string.push_str(task_str);
+    let mut task_to_write = parse_task(&task_string).unwrap();
+    task_to_write.id = stats.max_id+1;
+    stats.max_id+=1;
+    writeln!(writer, "{}", task_to_string(&task_to_write)).unwrap();
+    for l in lines {
+        writeln!(writer, "{}", l).unwrap();
+    }
+}
+
 fn toggle_task(task_id: i32, root_path: &Path) {
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
@@ -204,7 +223,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut f = fs::File::create(inbox_path.clone())?;
             f.write_all("".as_bytes())?;
         }
-        let _root_stats = initialise(root_path);
+        let root_stats = initialise(root_path);
         // Initialisation ends 
 
         let args = Cli::parse();
@@ -244,6 +263,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if modifier_value.is_some() {
                 let id: i32 = modifier_value.expect("Can't parse task id to remove.").parse().unwrap();
                 remove_task(id, root_path)
+            }
+        } else if args.command == "add" {
+            let modifier_value = args.modifier.clone();
+            if modifier_value.is_some() {
+                add_task(&modifier_value.unwrap(), &inbox_path, root_stats);
             }
         }
 
