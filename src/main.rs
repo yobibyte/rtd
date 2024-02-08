@@ -29,8 +29,6 @@ struct Task {
 //TODO check url without text tasks.
 
 fn parse_task(line: &str) -> Option<Task> {
-    // check that line starts with TASK_UNDONE or TASK_DONE
-    // if yes, put the rest into title for now
     if line.starts_with(TASK_DONE) || line.starts_with(TASK_UNDONE) {
         let mut line_to_parse = line;
         let status = line_to_parse.starts_with(TASK_DONE);
@@ -127,9 +125,6 @@ fn initialise(root_path: &Path) -> TaskStats {
                 }
                 ids.insert(task.id);
                 writeln!(writer, "{}", task_to_string(&task)).unwrap();
-                // println!("{}", task_to_string(&task));
-                // println!("{}", task.id);
-                // writeln!(writer, "{}", l).unwrap();
             }
             else {
                 writeln!(writer, "{}", l).unwrap();
@@ -138,8 +133,31 @@ fn initialise(root_path: &Path) -> TaskStats {
          
     }
     
-    // TODO: if there are duplicates, fix that by setting them to max_number+1 etc.
     stats
+}
+
+fn remove_task(task_id: i32, root_path: &Path) {
+    for fpath in get_all_files(root_path) {
+        let content = fs::read_to_string(&fpath).expect("Can't read the file");
+        let lines: Vec<_> = content.lines().collect();
+        let of = File::create(fpath).unwrap();
+        let mut writer = BufWriter::new(&of);
+        for l in lines {
+            if let Some(task) = parse_task(l) {
+                if task.id != task_id {
+                    writeln!(writer, "{}", task_to_string(&task)).unwrap();
+                } else {
+                    println!("{}", task_to_string(&task));
+                    println!("Task &{} is removed from the list", task_id);
+                }
+            }
+            else {
+                writeln!(writer, "{}", l).unwrap();
+            }
+        }
+    }
+    // todo: optimise and quit when found a task
+    // print if task was not found
 }
 
 fn toggle_task(task_id: i32, root_path: &Path) {
@@ -186,8 +204,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut f = fs::File::create(inbox_path.clone())?;
             f.write_all("".as_bytes())?;
         }
-        let root_stats = initialise(root_path);
-        println!("{}", root_stats.max_id);
+        let _root_stats = initialise(root_path);
         // Initialisation ends 
 
         let args = Cli::parse();
@@ -222,7 +239,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let id: i32 = modifier_value.expect("Can't parse task id to toggle.").parse().unwrap();
                 toggle_task(id, root_path)
             }
-
+        } else if args.command == "rm" {
+            let modifier_value = args.modifier.clone();
+            if modifier_value.is_some() {
+                let id: i32 = modifier_value.expect("Can't parse task id to remove.").parse().unwrap();
+                remove_task(id, root_path)
+            }
         }
 
     } else {
