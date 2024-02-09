@@ -152,6 +152,7 @@ fn initialise(root_path: &Path) -> TaskStats {
 }
 
 fn remove_task(task_id: i32, root_path: &Path) {
+    let mut found = false;
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
         let lines: Vec<_> = content.lines().collect();
@@ -164,15 +165,20 @@ fn remove_task(task_id: i32, root_path: &Path) {
                 } else {
                     println!("{}", task_to_string(&task));
                     println!("Task &{} is removed from the list", task_id);
+                    found = true;
                 }
             }
             else {
                 writeln!(writer, "{}", l).unwrap();
             }
         }
+        if found {
+            break;
+        }
     }
-    // todo: optimise and quit when found a task
-    // print if task was not found
+    if !found {
+        println!("Task &{} is not in any of your files", task_id);
+    };
 }
 
 fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
