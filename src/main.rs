@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, Write, BufWriter};
 use std::collections::HashSet;
 use homedir::get_my_home;
 use std::path::{Path, PathBuf};
+use std::fs::OpenOptions;
 use clap::Parser;
 
 const CONFIG_FNAME: &str = ".rtd";
@@ -11,6 +12,7 @@ const INBOX_FNAME: &str = "inbox.md";
 const RTD_ROOT_VAR_NAME: &str = "RTD_ROOT";
 const TASK_UNDONE: &str = "- [ ]";
 const TASK_DONE: &str = "- [x]";
+const DONE_TASKS_FNAME: &str = ".done";
 
 #[derive(Parser)]
 struct Cli {
@@ -137,6 +139,14 @@ fn initialise(root_path: &Path) -> TaskStats {
         }
          
     }
+
+    let done_file_path = root_path.join(DONE_TASKS_FNAME);
+    if !done_file_path.exists() {
+        println!("There is no {DONE_TASKS_FNAME} file in the root. Creating...");
+        let mut f = fs::File::create(done_file_path.clone()).unwrap();
+        f.write_all("".as_bytes()).expect("");
+    }
+
     
     stats
 }
@@ -208,6 +218,31 @@ fn toggle_task(task_id: i32, root_path: &Path) {
     // print if task was not found
 }
 
+fn archive_tasks(root_path: &Path) {
+    let mut done_file = OpenOptions::new().append(true).open(root_path.join(DONE_TASKS_FNAME)).unwrap();
+
+    for fpath in get_all_files(root_path) {
+        let content = fs::read_to_string(&fpath).expect("Can't read the file");
+        let lines: Vec<_> = content.lines().collect();
+        let of = File::create(fpath.clone()).unwrap();
+        let mut writer = BufWriter::new(&of);
+        for l in lines {
+            if let Some(task) = parse_task(l) {
+                let mut task_string = task_to_string(&task);
+                if task.is_done {
+                    task_string.push(' ');
+                    task_string.push_str(fpath.to_str().unwrap());
+                    writeln!(done_file, "{task_string}").unwrap(); 
+                } else{
+                    writeln!(writer, "{task_string}").unwrap();
+                }
+            }
+            else {
+                writeln!(writer, "{}", l).unwrap();
+            }
+        }
+    }
+}
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // I have no idea what's going on and why we need to unwrap twice.
     // I am also surprised that to get your home directory, you need a crate.
@@ -284,6 +319,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 println!("Specify a task to add!");
             }
+        } else if args.command == "archive" {
+            archive_tasks(root_path);
+            println!("All tasks archived (moved to .done)");
         }
 
     } else {
