@@ -6,6 +6,7 @@ use homedir::get_my_home;
 use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use clap::Parser;
+use chrono::prelude::*;
 
 const CONFIG_FNAME: &str = ".rtd";
 const INBOX_FNAME: &str = "inbox.md";
@@ -87,22 +88,32 @@ fn task_to_string(task: &Task) -> String {
     return task_string;
 }
 
-fn get_file_tasks(fname: &Path) -> Vec<Task> {
+fn get_file_tasks(fname: &Path, due_only: bool) -> Vec<Task> {
     let file = File::open(fname).unwrap();
     let mut file_tasks = Vec::new();
     let reader = BufReader::new(file);
+    let today = Local::now().format("%Y-%m-%d");
+    let speedate_today = Date::parse_str_rfc3339(&today.to_string()).expect("Can't parse today's date.");
     for line in reader.lines() {
         let line = line.unwrap();
         if let Some(task) = parse_task(&line) {
-            file_tasks.push(task);
+            if due_only {
+                if task.date.is_some() && task.date.clone().unwrap() <= speedate_today {
+                    file_tasks.push(task);
+                }
+            } else {
+                file_tasks.push(task);
+            }
         }
     }
     file_tasks
 }
 
-fn show_file_tasks(fname: &Path) {
-    println!("####### {} #######", fname.to_str().expect(""));
-    let file_tasks = get_file_tasks(fname);
+fn show_file_tasks(fname: &Path, due_only: bool) {
+    let file_tasks = get_file_tasks(fname, due_only);
+    if file_tasks.len() > 0 {
+        println!("####### {} #######", fname.to_str().expect(""));
+    }
     for task in file_tasks{
         println!("{}", task_to_string(&task));
     }
@@ -134,7 +145,7 @@ struct TaskStats {
 fn initialise(root_path: &Path) -> TaskStats {
     let mut stats = TaskStats{max_id:0};
     for fpath in get_all_files(root_path) {
-        let ftasks = get_file_tasks(&fpath);
+        let ftasks = get_file_tasks(&fpath, false);
         for t in ftasks {
             stats.max_id = std::cmp::max(t.id, stats.max_id);
         }
@@ -342,19 +353,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if args.command == "show" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_none() {
-                show_file_tasks(&inbox_path);
+                show_file_tasks(&inbox_path, false);
             } else if modifier_value.clone().expect("") == "all" {
                 for fpath in get_all_files(root_path) {
-                    show_file_tasks(&fpath);
+                    show_file_tasks(&fpath, false);
+                }
+            } else if modifier_value.clone().expect("") == "due" {
+                for fpath in get_all_files(root_path) {
+                    show_file_tasks(&fpath, true);
                 }
             } else {
                 // When we are here, we either get a folder name, or a file name.
                 let mod_path = root_path.join(modifier_value.clone().expect(""));
                 if modifier_value.clone().expect("").ends_with(".md") {
-                    show_file_tasks(&mod_path);
+                    show_file_tasks(&mod_path, false);
                 } else {
                     for fpath in get_all_files(&mod_path) {
-                        show_file_tasks(&fpath);
+                        show_file_tasks(&fpath, false);
                     }
                 }
             }

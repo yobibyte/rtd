@@ -22,8 +22,10 @@ RTD_ROOT/learning/watch.md
 - Show your gtd directory structure: `rtd list`. 
 - Show your inbox: `rtd show`. 
 - Show all your todos: `rtd show all`. 
+- Show all your due todos (those with date set, <= today's date): `rtd show due`. 
 - Show all todos in a file (e.g. learn/read.md): `rtd show learn/read.md`. 
 - Add task to your inbox.md: `rtd add "Delete Todoist on your smartphone."`.
+- Add task to your inbox.md with a due-date (YYYY-MM-DD): `rtd add "Delete Todoist on your smartphone. %2024-01-25"`.
 - Add task to any other file (e.g. learn/read.md): `rtd add "Read LSTM paper" learn/read.md`. 
 - Toggle task status (done/undone) for task with id &32: `rtd toggle 32`.
 - Remove task with id &32: `rtd rm 32`.
@@ -57,7 +59,7 @@ I wanted to learn Rust, and I wanted rtd to be damn fast.
 - [x] Archive done todos.
 - [x] Add documentation.
 - [x] Add date support (e.g. %YYYY-MM-DD).
-- [ ] Print out todos for today based on the date.
+- [x] Print out todos for today based on the date.
 - [ ] Add label support (e.g. @next).
 - [ ] Cleanup exception handling.
 - [ ] Support recurrent tasks.
