@@ -151,6 +151,39 @@ fn initialise(root_path: &Path) -> TaskStats {
     stats
 }
 
+fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
+    let mut found = false;
+    for fpath in get_all_files(root_path) {
+        let content = fs::read_to_string(&fpath).expect("Can't read the file");
+        let lines: Vec<_> = content.lines().collect();
+        let of = File::create(fpath).unwrap();
+        let mut writer = BufWriter::new(&of);
+        for l in lines {
+            if let Some(task) = parse_task(l) {
+                if task.id != task_id {
+                    writeln!(writer, "{}", l).unwrap();
+                } else {
+                    println!("{}", task_to_string(&task));
+                    println!("Task &{} is moved to the list {}", task_id, dest_fpath.to_str().unwrap());
+                    let mut dest_file = OpenOptions::new().append(true).open(root_path.join(dest_fpath)).unwrap();
+                    writeln!(dest_file, "{l}").unwrap(); 
+                    found = true;
+                }
+            }
+            else {
+                writeln!(writer, "{}", l).unwrap();
+            }
+        }
+        if found {
+            break;
+        }
+        //Do I need to close the files in rust?
+    }
+    if !found {
+        println!("Task &{} is not in any of your files", task_id);
+    };
+}
+
 fn remove_task(task_id: i32, root_path: &Path) {
     let mut found = false;
     for fpath in get_all_files(root_path) {
@@ -328,6 +361,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if args.command == "archive" {
             archive_tasks(root_path);
             println!("All tasks archived (moved to .done)");
+        } else if args.command == "mv" {
+            let modifier_value = args.modifier.clone();
+            if modifier_value.is_some() {
+                let id: i32 = modifier_value.expect("Can't parse task id to move.").parse().unwrap();
+                let submodifier_value = args.submodifier.expect("Please provide a destination file to move the task to.");
+                let dest_fpath = Path::new(&submodifier_value);
+                move_task(id, root_path, dest_fpath);
+            }
+            
         }
 
     } else {
