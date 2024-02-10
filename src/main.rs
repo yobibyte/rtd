@@ -370,6 +370,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 move_task(id, root_path, dest_fpath);
             }
             
+        } else {
+            println!("Unknown command: {}", args.command);
         }
 
     } else {

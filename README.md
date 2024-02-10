@@ -15,6 +15,39 @@ RTD_ROOT/learning/read.md
 RTD_ROOT/learning/watch.md
 ```
 
+## FAQ
+
+### How do I use this tool?
+
+- Show your inbox: `rtd show`. 
+- Show all your todos: `rtd show all`. 
+- Show all todos in a file (e.g. learn/read.md): `rtd show learn/read.md`. 
+- Add task to your inbox.md: `rtd add "Delete Todoist on your smartphone."`.
+- Add task to any other file (e.g. learn/read.md): `rtd add "Read LSTM paper" learn/read.md`. 
+- Toggle task status (done/undone) for task with id &32: `rtd toggle 32`.
+- Remove task with id &32: `rtd rm 32`.
+- Move task with id &32 to file maybe.md: `rtd mv 32 maybe.md`.
+- Move all done tasks to the .done list: `rtd archive`.
+
+### Why do you need this?
+
+I got frustrated with Todoist not being able to sync my todos, and I like distraction-free apps in my terminal.
+
+### How can I use this on my phone?
+
+My RTD_ROOT directory is in an Obsidian vault that's synced with my phone. I can edit it through Obsidian on my smartphone.
+
+### How can I help?
+
+Any contributions and feedback are welcomed!
+
+### Why not python? 
+
+I wanted to learn Rust, and I wanted rtd to be damn fast.
+
+- Show your gtd directory structure: `rtd list`. 
+
+
 ## Roadmap
 - [x] Print out the inbox content.
 - [x] Print out all todos in the root recursively.
@@ -22,11 +55,11 @@ RTD_ROOT/learning/watch.md
 - [x] Print out todos for a particular folder, including the root.
 - [x] Toggle todo status 
 - [x] Add todo to a particular project.
-- [ ] Cleanup exception handling.
-- [ ] Add proper documentation.
+- [x] Archive done todos.
+- [x] Add documentation.
 - [ ] Add date support (e.g. !YYYY-MM-DD).
-- [ ] Add label support (e.g. @next).
 - [ ] Print out todos for today based on the date.
-- [ ] Add the description support. (e.g. $this is a comment)
-- [ ] Move done task to #Done section of the list, and back to the end of the not-done section.
+- [ ] Add label support (e.g. @next).
+- [ ] Cleanup exception handling.
 - [ ] Support recurrent tasks.
+- [ ] Add the description support. (e.g. $this is a comment)
