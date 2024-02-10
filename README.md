@@ -19,6 +19,7 @@ RTD_ROOT/learning/watch.md
 
 ### How do I use this tool?
 
+- Show your gtd directory structure: `rtd list`. 
 - Show your inbox: `rtd show`. 
 - Show all your todos: `rtd show all`. 
 - Show all todos in a file (e.g. learn/read.md): `rtd show learn/read.md`. 
@@ -44,8 +45,6 @@ Any contributions and feedback are welcomed!
 ### Why not python? 
 
 I wanted to learn Rust, and I wanted rtd to be damn fast.
-
-- Show your gtd directory structure: `rtd list`. 
 
 
 ## Roadmap
