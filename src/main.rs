@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-// use std::time::Instant;
+use speedate::Date;
 use std::io::{BufRead, BufReader, Write, BufWriter};
 use std::collections::HashSet;
 use homedir::get_my_home;
@@ -25,7 +25,7 @@ struct Task {
     is_done: bool,
     id: i32,
     title: String,
-    // date: Instant,
+    date: Option<Date>,
     // labels: Vec<String>,
 }
 
@@ -41,15 +41,29 @@ fn parse_task(line: &str) -> Option<Task> {
         let mut split_string = line_to_parse.split_whitespace();
         let potential_id = split_string.next()?;
         let mut id = -1;
-        let mut split_string_vec = split_string.clone().collect::<Vec<&str>>();
+        let split_string_vec = split_string.clone().collect::<Vec<&str>>();
+        let mut task_body_vec: Vec<&str> = Vec::new();
+        let mut task_date: Option<Date> = None;
         if potential_id.starts_with('&') {
             id = (potential_id.strip_prefix('&'))?.parse().unwrap();
         } else {
-            split_string_vec.insert(0, potential_id);
+            task_body_vec.push(potential_id);
         }
+        for v in split_string_vec.iter() {
+            if v.starts_with('%') {
+                let date = Date::parse_str_rfc3339(&v[1..]);
+                if date.is_ok() {
+                    task_date = Some(date.expect("")); 
+                } else {
+                    task_body_vec.push(v);
+                }
+            } else {
+                task_body_vec.push(v);
+            }
+        } 
+
+        let task = Task {id, title:task_body_vec.join(" "), is_done: status, date: task_date};
         
-        let task = Task {id, title:split_string_vec.join(" "), is_done: status};
-        // let task = Task {id, title:split_string.collect::<Vec<&str>>().join(" "), is_done: status};
         Some(task)
     } else {
         None
@@ -58,8 +72,19 @@ fn parse_task(line: &str) -> Option<Task> {
 
 fn task_to_string(task: &Task) -> String {
     let status_string = if task.is_done {TASK_DONE} else {TASK_UNDONE}; 
-    let id_field = format!("&{}", task.id);
-    format!("{} {:8} {}", status_string, id_field, task.title)
+    let mut task_string = String::new();
+
+    task_string.push_str(status_string);
+    task_string.push_str(" &");
+    task_string.push_str(&task.id.to_string());
+    task_string.push(' ');
+    task_string.push_str(&task.title);
+
+    if task.date.is_some() {
+        task_string.push_str(" %");
+        task_string.push_str(&task.date.clone().unwrap().to_string());
+    }
+    return task_string;
 }
 
 fn get_file_tasks(fname: &Path) -> Vec<Task> {

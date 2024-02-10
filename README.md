@@ -56,7 +56,7 @@ I wanted to learn Rust, and I wanted rtd to be damn fast.
 - [x] Add todo to a particular project.
 - [x] Archive done todos.
 - [x] Add documentation.
-- [ ] Add date support (e.g. !YYYY-MM-DD).
+- [x] Add date support (e.g. %YYYY-MM-DD).
 - [ ] Print out todos for today based on the date.
 - [ ] Add label support (e.g. @next).
 - [ ] Cleanup exception handling.
