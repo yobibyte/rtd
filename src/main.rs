@@ -385,9 +385,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let args = Cli::parse();
         if args.command == "list" {
+            let root_path_str = root_path.to_str().unwrap().to_string();
             println!("All gtd projects:");
             for fpath in get_all_files(root_path) {
-                println!("{}", fpath.to_str().expect(""));
+                println!("{}", fpath.to_str().expect("").strip_prefix(&root_path_str).unwrap());
             }
 
         //TODO: Check files for keywords and throw an error
