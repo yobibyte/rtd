@@ -61,6 +61,6 @@ I wanted to learn Rust, and I wanted rtd to be damn fast.
 - [x] Add date support (e.g. %YYYY-MM-DD).
 - [x] Print out todos for today based on the date.
 - [ ] Add label support (e.g. @next).
+- [ ] Add the description support. (e.g. $this is a comment$)
 - [ ] Cleanup exception handling.
 - [ ] Support recurrent tasks.
-- [ ] Add the description support. (e.g. $this is a comment)

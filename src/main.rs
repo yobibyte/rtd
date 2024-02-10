@@ -14,6 +14,10 @@ const RTD_ROOT_VAR_NAME: &str = "RTD_ROOT";
 const TASK_UNDONE: &str = "- [ ]";
 const TASK_DONE: &str = "- [x]";
 const DONE_TASKS_FNAME: &str = ".done";
+// SERVICE_FNAMES files will be ignored
+// when iterating over files.
+// They are used by rtd for bookkeeping.
+const SERVICE_FNAMES: [&str; 1] = [DONE_TASKS_FNAME];
 
 #[derive(Parser)]
 struct Cli {
@@ -27,7 +31,7 @@ struct Task {
     id: i32,
     title: String,
     date: Option<Date>,
-    // labels: Vec<String>,
+    labels: Vec<String>,
 }
 
 //TODO check url without text tasks.
@@ -45,6 +49,7 @@ fn parse_task(line: &str) -> Option<Task> {
         let split_string_vec = split_string.clone().collect::<Vec<&str>>();
         let mut task_body_vec: Vec<&str> = Vec::new();
         let mut task_date: Option<Date> = None;
+        let mut labels: Vec<String> = Vec::new();
         if potential_id.starts_with('&') {
             id = (potential_id.strip_prefix('&'))?.parse().unwrap();
         } else {
@@ -52,18 +57,20 @@ fn parse_task(line: &str) -> Option<Task> {
         }
         for v in split_string_vec.iter() {
             if v.starts_with('%') {
-                let date = Date::parse_str_rfc3339(&v[1..]);
+                let date = Date::parse_str_rfc3339(v.strip_prefix('%')?);
                 if date.is_ok() {
                     task_date = Some(date.expect("")); 
                 } else {
                     task_body_vec.push(v);
                 }
+            } else if v.starts_with('@'){
+                labels.push(v.to_string()); 
             } else {
                 task_body_vec.push(v);
             }
         } 
 
-        let task = Task {id, title:task_body_vec.join(" "), is_done: status, date: task_date};
+        let task = Task {id, title:task_body_vec.join(" "), is_done: status, date: task_date, labels};
         
         Some(task)
     } else {
@@ -85,10 +92,18 @@ fn task_to_string(task: &Task) -> String {
         task_string.push_str(" %");
         task_string.push_str(&task.date.clone().unwrap().to_string());
     }
-    return task_string;
+
+    if !task.labels.is_empty() {
+        for l in task.labels.iter() {
+            // We store labels together with the @ sign.
+            task_string.push(' ');
+            task_string.push_str(l);
+        }
+    }
+    task_string
 }
 
-fn get_file_tasks(fname: &Path, due_only: bool) -> Vec<Task> {
+fn get_file_tasks(fname: &Path, due_only: bool, label: Option<String>) -> Vec<Task> {
     let file = File::open(fname).unwrap();
     let mut file_tasks = Vec::new();
     let reader = BufReader::new(file);
@@ -97,11 +112,14 @@ fn get_file_tasks(fname: &Path, due_only: bool) -> Vec<Task> {
     for line in reader.lines() {
         let line = line.unwrap();
         if let Some(task) = parse_task(&line) {
-            if due_only {
-                if task.date.is_some() && task.date.clone().unwrap() <= speedate_today {
-                    file_tasks.push(task);
-                }
-            } else {
+            let mut is_valid = true;
+            if due_only && (task.date.is_none() || task.date.clone().unwrap() > speedate_today ) {
+                is_valid = false;
+            }
+            if label.is_some() && !task.labels.contains(&label.clone().unwrap()) {
+                is_valid = false;
+            }
+            if is_valid {
                 file_tasks.push(task);
             }
         }
@@ -109,14 +127,25 @@ fn get_file_tasks(fname: &Path, due_only: bool) -> Vec<Task> {
     file_tasks
 }
 
-fn show_file_tasks(fname: &Path, due_only: bool) {
-    let file_tasks = get_file_tasks(fname, due_only);
-    if file_tasks.len() > 0 {
+fn show_file_tasks(fname: &Path, due_only: bool, label: Option<String>) {
+    let file_tasks = get_file_tasks(fname, due_only, label);
+    if !file_tasks.is_empty() {
         println!("####### {} #######", fname.to_str().expect(""));
     }
     for task in file_tasks{
         println!("{}", task_to_string(&task));
     }
+}
+
+fn get_file_labels(fname: &Path) -> HashSet<String> {
+    let mut labels: HashSet<String> = HashSet::new();
+    let file_tasks = get_file_tasks(fname, false, None);
+    for t in file_tasks {
+        for l in t.labels {
+            labels.insert(l);
+        }
+    }
+    labels
 }
 
 fn get_all_files(dir: &Path) -> Vec<PathBuf> {
@@ -130,7 +159,18 @@ fn get_all_files(dir: &Path) -> Vec<PathBuf> {
                 if path.is_dir() {
                     dirs.push(path);
                 } else {
-                    all_files.push(path);
+                    let mut is_service = false;
+                    for el in SERVICE_FNAMES {
+                        // Ideally, this el has to be joined with root_path,
+                        // but I was lazy.
+                        if path.ends_with(el) {
+                            is_service = true;
+                            break;
+                        }
+                    }
+                    if !is_service {
+                        all_files.push(path);
+                    }
                 }
             }
         }
@@ -145,7 +185,7 @@ struct TaskStats {
 fn initialise(root_path: &Path) -> TaskStats {
     let mut stats = TaskStats{max_id:0};
     for fpath in get_all_files(root_path) {
-        let ftasks = get_file_tasks(&fpath, false);
+        let ftasks = get_file_tasks(&fpath, false, None);
         for t in ftasks {
             stats.max_id = std::cmp::max(t.id, stats.max_id);
         }
@@ -350,26 +390,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{}", fpath.to_str().expect(""));
             }
 
+        //TODO: Check files for keywords and throw an error
+        // if there are folders with names due/labels etc.
         } else if args.command == "show" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_none() {
-                show_file_tasks(&inbox_path, false);
+                show_file_tasks(&inbox_path, false, None);
             } else if modifier_value.clone().expect("") == "all" {
                 for fpath in get_all_files(root_path) {
-                    show_file_tasks(&fpath, false);
+                    show_file_tasks(&fpath, false, None);
                 }
             } else if modifier_value.clone().expect("") == "due" {
                 for fpath in get_all_files(root_path) {
-                    show_file_tasks(&fpath, true);
+                    show_file_tasks(&fpath, true, None);
+                }
+            } else if modifier_value.clone().expect("") == "labels" {
+                let mut all_labels: HashSet<String> = HashSet::new();
+                for fpath in get_all_files(root_path) {
+                    all_labels.extend(get_file_labels(&fpath));
+                }
+                for l in all_labels {
+                    println!("{l}");
+                }
+            } else if modifier_value.clone().expect("").starts_with('@') {
+                for fpath in get_all_files(root_path) {
+                    show_file_tasks(&fpath, false, Some(modifier_value.clone().expect("")));
                 }
             } else {
                 // When we are here, we either get a folder name, or a file name.
                 let mod_path = root_path.join(modifier_value.clone().expect(""));
                 if modifier_value.clone().expect("").ends_with(".md") {
-                    show_file_tasks(&mod_path, false);
+                    show_file_tasks(&mod_path, false, None);
                 } else {
                     for fpath in get_all_files(&mod_path) {
-                        show_file_tasks(&fpath, false);
+                        show_file_tasks(&fpath, false, None);
                     }
                 }
             }
