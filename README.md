@@ -30,6 +30,7 @@ RTD_ROOT/learning/watch.md
 - Add task to any other file (e.g. learn/read.md): `rtd add "Read LSTM paper" learn/read.md`. 
 - Toggle task status (done/undone) for task with id &32: `rtd toggle 32`.
 - Remove task with id &32: `rtd rm 32`.
+- Toggle task 32 date (if date is set, it will be deleted, otherwise it will be due today): `rtd td 32`.
 - Move task with id &32 to file maybe.md: `rtd mv 32 maybe.md`.
 - Move all done tasks to the .done list: `rtd archive`.
 

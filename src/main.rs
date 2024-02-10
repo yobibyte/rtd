@@ -103,12 +103,16 @@ fn task_to_string(task: &Task) -> String {
     task_string
 }
 
+fn today() -> Date {
+    let today = Local::now().format("%Y-%m-%d");
+    Date::parse_str_rfc3339(&today.to_string()).expect("Can't parse today's date.")
+}
+
 fn get_file_tasks(fname: &Path, due_only: bool, label: Option<String>) -> Vec<Task> {
     let file = File::open(fname).unwrap();
     let mut file_tasks = Vec::new();
     let reader = BufReader::new(file);
-    let today = Local::now().format("%Y-%m-%d");
-    let speedate_today = Date::parse_str_rfc3339(&today.to_string()).expect("Can't parse today's date.");
+    let speedate_today = today();
     for line in reader.lines() {
         let line = line.unwrap();
         if let Some(task) = parse_task(&line) {
@@ -311,7 +315,7 @@ fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
     }
 }
 
-fn toggle_task(task_id: i32, root_path: &Path) {
+fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date: bool) {
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
         let lines: Vec<_> = content.lines().collect();
@@ -320,7 +324,16 @@ fn toggle_task(task_id: i32, root_path: &Path) {
         for l in lines {
             if let Some(mut task) = parse_task(l) {
                 if task.id == task_id {
-                    task.is_done = !task.is_done;
+                    if toggle_status {
+                        task.is_done = !task.is_done;
+                    }
+                    if toggle_date {
+                        if task.date.is_some() {
+                            task.date = None;
+                        } else {
+                            task.date = Some(today());
+                        }
+                    }
                 }
                 writeln!(writer, "{}", task_to_string(&task)).unwrap();
             }
@@ -428,17 +441,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-        } else if args.command == "toggle" {
+        } else if args.command == "toggle" || args.command == "td" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
-                let id: i32 = modifier_value.expect("Can't parse task id to toggle.").parse().unwrap();
-                toggle_task(id, root_path)
+                let id: i32 = modifier_value.expect("Can't parse task id.").parse().unwrap();
+                if args.command == "toggle" {
+                    toggle_task(id, root_path, true, false);
+                } else if args.command == "td" {
+                    toggle_task(id, root_path, false, true);
+                }
             }
         } else if args.command == "rm" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
                 let id: i32 = modifier_value.expect("Can't parse task id to remove.").parse().unwrap();
-                remove_task(id, root_path)
+                remove_task(id, root_path);
             }
         } else if args.command == "add" {
             let modifier_value = args.modifier.clone();
