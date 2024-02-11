@@ -346,6 +346,35 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
     // print if task was not found
 }
 
+// TODO: make a general 'modify_task' function that takes
+// options for each of the task fields.
+// This will allow to get rid of all the similar functions 
+// that iterate over files and find one id.
+// Another thing to do will be to keep a hashmap of the file/ids
+// when initialising, and use this to find a file to write to.
+// These two are complementary to each other.
+fn add_label_to_task(task_id: i32, root_path: &Path, label: String) {
+    for fpath in get_all_files(root_path) {
+        let content = fs::read_to_string(&fpath).expect("Can't read the file");
+        let lines: Vec<_> = content.lines().collect();
+        let of = File::create(fpath).unwrap();
+        let mut writer = BufWriter::new(&of);
+        for l in lines {
+            if let Some(mut task) = parse_task(l) {
+                if task.id == task_id {
+                    task.labels.push(label.clone());
+                }
+                writeln!(writer, "{}", task_to_string(&task)).unwrap();
+            }
+            else {
+                writeln!(writer, "{}", l).unwrap();
+            }
+        }
+    }
+    // todo: optimise and quit when found a task
+    // print if task was not found
+}
+
 fn archive_tasks(root_path: &Path) {
     let mut done_file = OpenOptions::new().append(true).open(root_path.join(DONE_TASKS_FNAME)).unwrap();
 
@@ -450,6 +479,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else if args.command == "td" {
                     toggle_task(id, root_path, false, true);
                 }
+            }
+        } else if args.command == "al" {
+            let modifier_value = args.modifier.clone();
+            if modifier_value.is_some() {
+                let id: i32 = modifier_value.expect("Can't parse task id.").parse().unwrap();
+                let submodifier_value = args.submodifier.clone();
+                if submodifier_value.is_some() { 
+                    let label_str = submodifier_value.unwrap().to_string();
+                    if label_str.starts_with('@') {
+                        add_label_to_task(id, root_path, label_str);
+                    } else {
+                        eprintln!("A label should start with @ and have no spaces in it.");
+
+                    }
+                } else {
+                    eprintln!("Provide a label to add.");
+                }
+                
+            } else {
+                eprintln!("Provide task id to add the label to.");
             }
         } else if args.command == "rm" {
             let modifier_value = args.modifier.clone();

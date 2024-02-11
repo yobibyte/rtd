@@ -29,6 +29,7 @@ RTD_ROOT/learning/watch.md
 - Add task to your inbox.md with a due-date (YYYY-MM-DD) and a label: `rtd add "Delete Todoist on your smartphone. %2024-01-25 @next"`.
 - Add task to any other file (e.g. learn/read.md): `rtd add "Read LSTM paper" learn/read.md`. 
 - Toggle task status (done/undone) for task with id &32: `rtd toggle 32`.
+- Add label to task with id &32: `rtd al 32 @next`.
 - Remove task with id &32: `rtd rm 32`.
 - Toggle task 32 date (if date is set, it will be deleted, otherwise it will be due today): `rtd td 32`.
 - Move task with id &32 to file maybe.md: `rtd mv 32 maybe.md`.
