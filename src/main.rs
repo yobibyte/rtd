@@ -233,6 +233,11 @@ fn initialise(root_path: &Path) -> TaskStats {
 
 fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
     let mut found = false;
+    let dest_path = root_path.join(dest_fpath);
+    if !dest_path.exists() {
+        eprintln!("Destination file does not exist.");
+        return;
+    }
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
         let lines: Vec<_> = content.lines().collect();
