@@ -20,7 +20,7 @@ RTD_ROOT/learning/watch.md
 ### How do I use this tool?
 
 - Show your gtd directory structure: `rtd list`. 
-- Show your inbox: `rtd inbox`. 
+- Show your inbox: `rtd inbox` or just `rtd i`. 
 - Show all your todos: `rtd all`. 
 - Show all todos with a label: `rtd @next`.
 - Show all your labels: `rtd labels`. 

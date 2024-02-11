@@ -465,7 +465,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     show_file_tasks(&fpath, false, None);
                 }
             }
-        } else if args.command == "inbox" {
+        } else if args.command == "inbox" || args.command == "i" {
             show_file_tasks(&inbox_path, false, None);
         } else if args.command == "due" {
             for fpath in get_all_files(root_path) {
