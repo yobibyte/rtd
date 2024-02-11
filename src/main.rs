@@ -443,6 +443,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         //TODO: Check files for keywords and throw an error
         // if there are folders with names due/labels etc.
+        } else if args.command == "labels" {
+            let mut all_labels: HashSet<String> = HashSet::new();
+            for fpath in get_all_files(root_path) {
+                all_labels.extend(get_file_labels(&fpath));
+            }
+            for l in all_labels {
+                println!("{l}");
+            }
         } else if args.command == "show" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_none() {
@@ -450,18 +458,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else if modifier_value.clone().expect("") == "all" {
                 for fpath in get_all_files(root_path) {
                     show_file_tasks(&fpath, false, None);
-                }
-            } else if modifier_value.clone().expect("") == "due" {
-                for fpath in get_all_files(root_path) {
-                    show_file_tasks(&fpath, true, None);
-                }
-            } else if modifier_value.clone().expect("") == "labels" {
-                let mut all_labels: HashSet<String> = HashSet::new();
-                for fpath in get_all_files(root_path) {
-                    all_labels.extend(get_file_labels(&fpath));
-                }
-                for l in all_labels {
-                    println!("{l}");
                 }
             } else if modifier_value.clone().expect("").starts_with('@') {
                 for fpath in get_all_files(root_path) {
@@ -477,6 +473,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         show_file_tasks(&fpath, false, None);
                     }
                 }
+            }
+        } else if args.command == "due" {
+            for fpath in get_all_files(root_path) {
+                show_file_tasks(&fpath, true, None);
             }
         } else if args.command == "toggle" || args.command == "td" {
             let modifier_value = args.modifier.clone();

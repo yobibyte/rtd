@@ -23,7 +23,8 @@ RTD_ROOT/learning/watch.md
 - Show your inbox: `rtd show`. 
 - Show all your todos: `rtd show all`. 
 - Show all todos with a label: `rtd show @next`.
-- Show all your due todos (those with date set, <= today's date): `rtd show due`. 
+- Show all your labels: `rtd labels`. 
+- Show all your due todos (those with date set, <= today's date): `rtd due`.
 - Show all todos in a file (e.g. learn/read.md): `rtd show learn/read.md`. 
 - Add task to your inbox.md: `rtd add "Delete Todoist on your smartphone."`.
 - Add task to your inbox.md with a due-date (YYYY-MM-DD) and a label: `rtd add "Delete Todoist on your smartphone. %2024-01-25 @next"`.
