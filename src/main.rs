@@ -34,7 +34,7 @@ struct Task {
     labels: Vec<String>,
 }
 
-//TODO check url without text tasks.
+//TODO: check if negative ids are properly processed.
 
 fn parse_task(line: &str) -> Option<Task> {
     if line.starts_with(TASK_DONE) || line.starts_with(TASK_UNDONE) {
