@@ -326,6 +326,9 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
                 if task.id == task_id {
                     if toggle_status {
                         task.is_done = !task.is_done;
+                        println!("Changed status of the task {}", task_id);
+                        println!("Current state:");
+                        println!("{}", task_to_string(&task));
                     }
                     if toggle_date {
                         if task.date.is_some() {
@@ -413,7 +416,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("You need to have {RTD_ROOT_VAR_NAME}=<absolute_path> in the config.");
         }
         let rtd_root = line[1].strip_suffix('\n').expect("");
-        println!("Using rtd root: {rtd_root}");
+        println!("Using rtd root: {rtd_root}.");
 
         let root_path =  Path::new(rtd_root);
         let inbox_path =  root_path.join(INBOX_FNAME);
