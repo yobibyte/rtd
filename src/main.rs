@@ -434,6 +434,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Initialisation ends 
 
         let args = Cli::parse();
+        let maybe_path = root_path.join(args.command.clone());  
         if args.command == "list" {
             let root_path_str = root_path.to_str().unwrap().to_string();
             println!("All gtd projects:");
@@ -451,32 +452,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for l in all_labels {
                 println!("{l}");
             }
-        } else if args.command == "show" {
-            let modifier_value = args.modifier.clone();
-            if modifier_value.is_none() {
-                show_file_tasks(&inbox_path, false, None);
-            } else if modifier_value.clone().expect("") == "all" {
-                for fpath in get_all_files(root_path) {
+        } else if args.command.starts_with('@') {
+            for fpath in get_all_files(root_path) {
+                show_file_tasks(&fpath, false, Some(args.command.clone()));
+            }
+        } else if maybe_path.exists() {
+            // When we are here, we either get a folder name, or a file name.
+            if maybe_path.clone().to_str().unwrap().ends_with(".md") {
+                show_file_tasks(&maybe_path, false, None);
+            } else {
+                for fpath in get_all_files(&maybe_path) {
                     show_file_tasks(&fpath, false, None);
                 }
-            } else if modifier_value.clone().expect("").starts_with('@') {
-                for fpath in get_all_files(root_path) {
-                    show_file_tasks(&fpath, false, Some(modifier_value.clone().expect("")));
-                }
-            } else {
-                // When we are here, we either get a folder name, or a file name.
-                let mod_path = root_path.join(modifier_value.clone().expect(""));
-                if modifier_value.clone().expect("").ends_with(".md") {
-                    show_file_tasks(&mod_path, false, None);
-                } else {
-                    for fpath in get_all_files(&mod_path) {
-                        show_file_tasks(&fpath, false, None);
-                    }
-                }
             }
+        } else if args.command == "inbox" {
+            show_file_tasks(&inbox_path, false, None);
         } else if args.command == "due" {
             for fpath in get_all_files(root_path) {
                 show_file_tasks(&fpath, true, None);
+            }
+        } else if args.command == "all" {
+            for fpath in get_all_files(root_path) {
+                show_file_tasks(&fpath, false, None);
             }
         } else if args.command == "toggle" || args.command == "td" {
             let modifier_value = args.modifier.clone();
