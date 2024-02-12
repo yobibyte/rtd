@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use clap::Parser;
 use chrono::prelude::*;
+use regex::Regex;
 
 const CONFIG_FNAME: &str = ".rtd";
 const INBOX_FNAME: &str = "inbox.md";
@@ -436,7 +437,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("You need to have {RTD_ROOT_VAR_NAME}=<absolute_path> in the config.");
         }
         let rtd_root = line[1].strip_suffix('\n').expect("");
-        println!("Using rtd root: {rtd_root}.");
 
         let root_path =  Path::new(rtd_root);
         let inbox_path =  root_path.join(INBOX_FNAME);
@@ -451,11 +451,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let args = Cli::parse();
         let maybe_path = root_path.join(args.command.clone());  
 
-        if args.command.parse::<i32>().is_ok() {
+        if args.command == "debug" {
+            println!("Using rtd root: {rtd_root}.");
+        } else if args.command.parse::<i32>().is_ok() {
             let id = args.command.parse::<i32>().unwrap();
             let task = get_task(id, root_path);
             if task.is_some() {
-                println!("{}", task_to_string(&task.unwrap()))
+                let modifier_value = args.modifier.clone();
+                if modifier_value.is_some() && modifier_value.unwrap() == "url" {
+                    let re = Regex::new(r"http://\S+|https://\S+").unwrap();
+                    for cap in re.captures_iter(&task_to_string(&task.unwrap())) {
+                        println!("{}", &cap[0]);
+                    }
+                } else {
+                    println!("{}", task_to_string(&task.unwrap()))
+                }
             }
         } else if args.command == "list" {
             let root_path_str = root_path.to_str().unwrap().to_string();
