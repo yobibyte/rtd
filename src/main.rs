@@ -383,6 +383,21 @@ fn add_label_to_task(task_id: i32, root_path: &Path, label: String) {
     // print if task was not found
 }
 
+fn get_task(task_id: i32, root_path: &Path) -> Option<Task>{
+    for fpath in get_all_files(root_path) {
+        let content = fs::read_to_string(&fpath).expect("Can't read the file");
+        let lines: Vec<_> = content.lines().collect();
+        for l in lines {
+            if let Some(task) = parse_task(l) {
+                if task.id == task_id {
+                    return Some(task);
+                }
+            }
+        }
+    }
+    None
+}
+
 fn archive_tasks(root_path: &Path) {
     let mut done_file = OpenOptions::new().append(true).open(root_path.join(DONE_TASKS_FNAME)).unwrap();
 
@@ -435,7 +450,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let args = Cli::parse();
         let maybe_path = root_path.join(args.command.clone());  
-        if args.command == "list" {
+
+        if args.command.parse::<i32>().is_ok() {
+            let id = args.command.parse::<i32>().unwrap();
+            let task = get_task(id, root_path);
+            if task.is_some() {
+                println!("{}", task_to_string(&task.unwrap()))
+            }
+        } else if args.command == "list" {
             let root_path_str = root_path.to_str().unwrap().to_string();
             println!("All gtd projects:");
             for fpath in get_all_files(root_path) {
