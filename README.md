@@ -32,7 +32,7 @@ RTD_ROOT/learning/watch.md
 - Toggle task status (done/undone) for task with id &42: `rtd toggle 42`.
 - Add label to task with id &32: `rtd al 32 @next`.
 - Show task with id &42: `rtd 42`.
-- Show URLs (if there are any) in the task description: `rtd 42 url`.
+- Show URLs (if there are any) in the task description: `rtd url 42`.
 - Remove task with id &42: `rtd rm 42`.
 - Toggle task 42 date (if date is set, it will be deleted, otherwise it will be due today): `rtd td 42`.
 - Move task with id &42 to file maybe.md: `rtd mv 42 maybe.md`.

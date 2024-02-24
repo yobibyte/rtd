@@ -457,14 +457,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let id = args.command.parse::<i32>().unwrap();
             let task = get_task(id, root_path);
             if task.is_some() {
-                let modifier_value = args.modifier.clone();
-                if modifier_value.is_some() && modifier_value.unwrap() == "url" {
+                println!("{}", task_to_string(&task.unwrap()))
+            }
+        } else if args.command == "url" {
+            let modifier_value = args.modifier.clone();
+            if modifier_value.is_some() {
+                let id = modifier_value.unwrap().parse::<i32>().expect("Provide task id for the url command.");
+                let task = get_task(id, root_path);
+                if task.is_some() {
                     let re = Regex::new(r"http://\S+|https://\S+").unwrap();
                     for cap in re.captures_iter(&task_to_string(&task.unwrap())) {
                         println!("{}", &cap[0]);
                     }
-                } else {
-                    println!("{}", task_to_string(&task.unwrap()))
                 }
             }
         } else if args.command == "list" {
