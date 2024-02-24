@@ -1,13 +1,13 @@
-use std::fs::{self, File};
-use speedate::Date;
-use std::io::{BufRead, BufReader, Write, BufWriter};
-use std::collections::HashSet;
-use homedir::get_my_home;
-use std::path::{Path, PathBuf};
-use std::fs::OpenOptions;
-use clap::Parser;
 use chrono::prelude::*;
+use clap::Parser;
+use homedir::get_my_home;
 use regex::Regex;
+use speedate::Date;
+use std::collections::HashSet;
+use std::fs::OpenOptions;
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::path::{Path, PathBuf};
 
 const CONFIG_FNAME: &str = ".rtd";
 const INBOX_FNAME: &str = "inbox.md";
@@ -60,19 +60,25 @@ fn parse_task(line: &str) -> Option<Task> {
             if v.starts_with('%') {
                 let date = Date::parse_str_rfc3339(v.strip_prefix('%')?);
                 if date.is_ok() {
-                    task_date = Some(date.expect("")); 
+                    task_date = Some(date.expect(""));
                 } else {
                     task_body_vec.push(v);
                 }
-            } else if v.starts_with('@'){
-                labels.push(v.to_string()); 
+            } else if v.starts_with('@') {
+                labels.push(v.to_string());
             } else {
                 task_body_vec.push(v);
             }
-        } 
+        }
 
-        let task = Task {id, title:task_body_vec.join(" "), is_done: status, date: task_date, labels};
-        
+        let task = Task {
+            id,
+            title: task_body_vec.join(" "),
+            is_done: status,
+            date: task_date,
+            labels,
+        };
+
         Some(task)
     } else {
         None
@@ -80,7 +86,7 @@ fn parse_task(line: &str) -> Option<Task> {
 }
 
 fn task_to_string(task: &Task) -> String {
-    let status_string = if task.is_done {TASK_DONE} else {TASK_UNDONE}; 
+    let status_string = if task.is_done { TASK_DONE } else { TASK_UNDONE };
     let mut task_string = String::new();
 
     task_string.push_str(status_string);
@@ -118,7 +124,7 @@ fn get_file_tasks(fname: &Path, due_only: bool, label: Option<String>) -> Vec<Ta
         let line = line.unwrap();
         if let Some(task) = parse_task(&line) {
             let mut is_valid = true;
-            if due_only && (task.date.is_none() || task.date.clone().unwrap() > speedate_today ) {
+            if due_only && (task.date.is_none() || task.date.clone().unwrap() > speedate_today) {
                 is_valid = false;
             }
             if label.is_some() && !task.labels.contains(&label.clone().unwrap()) {
@@ -137,7 +143,7 @@ fn show_file_tasks(fname: &Path, due_only: bool, label: Option<String>) {
     if !file_tasks.is_empty() {
         println!("####### {} #######", fname.to_str().expect(""));
     }
-    for task in file_tasks{
+    for task in file_tasks {
         println!("{}", task_to_string(&task));
     }
 }
@@ -184,11 +190,11 @@ fn get_all_files(dir: &Path) -> Vec<PathBuf> {
 }
 
 struct TaskStats {
-   max_id: i32, 
+    max_id: i32,
 }
 
 fn initialise(root_path: &Path) -> TaskStats {
-    let mut stats = TaskStats{max_id:0};
+    let mut stats = TaskStats { max_id: 0 };
     for fpath in get_all_files(root_path) {
         let ftasks = get_file_tasks(&fpath, false, None);
         for t in ftasks {
@@ -207,18 +213,16 @@ fn initialise(root_path: &Path) -> TaskStats {
         let mut writer = BufWriter::new(&of);
         for l in lines {
             if let Some(mut task) = parse_task(l) {
-                if task.id < 0 && ids.contains(&task.id){
-                    task.id = stats.max_id+1;
-                    stats.max_id+=1;
+                if task.id < 0 && ids.contains(&task.id) {
+                    task.id = stats.max_id + 1;
+                    stats.max_id += 1;
                 }
                 ids.insert(task.id);
                 writeln!(writer, "{}", task_to_string(&task)).unwrap();
-            }
-            else {
+            } else {
                 writeln!(writer, "{}", l).unwrap();
             }
         }
-         
     }
 
     let done_file_path = root_path.join(DONE_TASKS_FNAME);
@@ -228,7 +232,6 @@ fn initialise(root_path: &Path) -> TaskStats {
         f.write_all("".as_bytes()).expect("");
     }
 
-    
     stats
 }
 
@@ -250,13 +253,19 @@ fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
                     writeln!(writer, "{}", l).unwrap();
                 } else {
                     println!("{}", task_to_string(&task));
-                    println!("Task &{} is moved to the list {}", task_id, dest_fpath.to_str().unwrap());
-                    let mut dest_file = OpenOptions::new().append(true).open(root_path.join(dest_fpath)).unwrap();
-                    writeln!(dest_file, "{l}").unwrap(); 
+                    println!(
+                        "Task &{} is moved to the list {}",
+                        task_id,
+                        dest_fpath.to_str().unwrap()
+                    );
+                    let mut dest_file = OpenOptions::new()
+                        .append(true)
+                        .open(root_path.join(dest_fpath))
+                        .unwrap();
+                    writeln!(dest_file, "{l}").unwrap();
                     found = true;
                 }
-            }
-            else {
+            } else {
                 writeln!(writer, "{}", l).unwrap();
             }
         }
@@ -286,8 +295,7 @@ fn remove_task(task_id: i32, root_path: &Path) {
                     println!("Task &{} is removed from the list", task_id);
                     found = true;
                 }
-            }
-            else {
+            } else {
                 writeln!(writer, "{}", l).unwrap();
             }
         }
@@ -301,7 +309,6 @@ fn remove_task(task_id: i32, root_path: &Path) {
 }
 
 fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
-
     let content = fs::read_to_string(fpath).expect("Can't read the file");
     let lines: Vec<_> = content.lines().collect();
     let of = File::create(fpath).unwrap();
@@ -311,8 +318,8 @@ fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
     task_string.push(' ');
     task_string.push_str(task_str);
     let mut task_to_write = parse_task(&task_string).unwrap();
-    task_to_write.id = stats.max_id+1;
-    stats.max_id+=1;
+    task_to_write.id = stats.max_id + 1;
+    stats.max_id += 1;
     println!("Added new task to {}:", fpath.to_str().unwrap());
     println!("{}", task_to_string(&task_to_write));
     writeln!(writer, "{}", task_to_string(&task_to_write)).unwrap();
@@ -345,8 +352,7 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
                     }
                 }
                 writeln!(writer, "{}", task_to_string(&task)).unwrap();
-            }
-            else {
+            } else {
                 writeln!(writer, "{}", l).unwrap();
             }
         }
@@ -357,7 +363,7 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
 
 // TODO: make a general 'modify_task' function that takes
 // options for each of the task fields.
-// This will allow to get rid of all the similar functions 
+// This will allow to get rid of all the similar functions
 // that iterate over files and find one id.
 // Another thing to do will be to keep a hashmap of the file/ids
 // when initialising, and use this to find a file to write to.
@@ -374,8 +380,7 @@ fn add_label_to_task(task_id: i32, root_path: &Path, label: String) {
                     task.labels.push(label.clone());
                 }
                 writeln!(writer, "{}", task_to_string(&task)).unwrap();
-            }
-            else {
+            } else {
                 writeln!(writer, "{}", l).unwrap();
             }
         }
@@ -384,7 +389,7 @@ fn add_label_to_task(task_id: i32, root_path: &Path, label: String) {
     // print if task was not found
 }
 
-fn get_task(task_id: i32, root_path: &Path) -> Option<Task>{
+fn get_task(task_id: i32, root_path: &Path) -> Option<Task> {
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
         let lines: Vec<_> = content.lines().collect();
@@ -400,7 +405,10 @@ fn get_task(task_id: i32, root_path: &Path) -> Option<Task>{
 }
 
 fn archive_tasks(root_path: &Path) {
-    let mut done_file = OpenOptions::new().append(true).open(root_path.join(DONE_TASKS_FNAME)).unwrap();
+    let mut done_file = OpenOptions::new()
+        .append(true)
+        .open(root_path.join(DONE_TASKS_FNAME))
+        .unwrap();
 
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
@@ -413,12 +421,11 @@ fn archive_tasks(root_path: &Path) {
                 if task.is_done {
                     task_string.push(' ');
                     task_string.push_str(fpath.to_str().unwrap());
-                    writeln!(done_file, "{task_string}").unwrap(); 
-                } else{
+                    writeln!(done_file, "{task_string}").unwrap();
+                } else {
                     writeln!(writer, "{task_string}").unwrap();
                 }
-            }
-            else {
+            } else {
                 writeln!(writer, "{}", l).unwrap();
             }
         }
@@ -438,18 +445,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         let rtd_root = line[1].strip_suffix('\n').expect("");
 
-        let root_path =  Path::new(rtd_root);
-        let inbox_path =  root_path.join(INBOX_FNAME);
+        let root_path = Path::new(rtd_root);
+        let inbox_path = root_path.join(INBOX_FNAME);
         if !inbox_path.exists() {
             println!("There is no {INBOX_FNAME} file in the root. Creating...");
             let mut f = fs::File::create(inbox_path.clone())?;
             f.write_all("".as_bytes())?;
         }
         let root_stats = initialise(root_path);
-        // Initialisation ends 
+        // Initialisation ends
 
         let args = Cli::parse();
-        let maybe_path = root_path.join(args.command.clone());  
+        let maybe_path = root_path.join(args.command.clone());
 
         if args.command == "debug" {
             println!("Using rtd root: {rtd_root}.");
@@ -462,7 +469,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if args.command == "url" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
-                let id = modifier_value.unwrap().parse::<i32>().expect("Provide task id for the url command.");
+                let id = modifier_value
+                    .unwrap()
+                    .parse::<i32>()
+                    .expect("Provide task id for the url command.");
                 let task = get_task(id, root_path);
                 if task.is_some() {
                     let re = Regex::new(r"http://\S+|https://\S+").unwrap();
@@ -475,7 +485,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let root_path_str = root_path.to_str().unwrap().to_string();
             println!("All gtd projects:");
             for fpath in get_all_files(root_path) {
-                println!("{}", fpath.to_str().expect("").strip_prefix(&root_path_str).unwrap());
+                println!(
+                    "{}",
+                    fpath
+                        .to_str()
+                        .expect("")
+                        .strip_prefix(&root_path_str)
+                        .unwrap()
+                );
             }
 
         //TODO: Check files for keywords and throw an error
@@ -514,7 +531,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if args.command == "toggle" || args.command == "td" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
-                let id: i32 = modifier_value.expect("Can't parse task id.").parse().unwrap();
+                let id: i32 = modifier_value
+                    .expect("Can't parse task id.")
+                    .parse()
+                    .unwrap();
                 if args.command == "toggle" {
                     toggle_task(id, root_path, true, false);
                 } else if args.command == "td" {
@@ -524,27 +544,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if args.command == "al" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
-                let id: i32 = modifier_value.expect("Can't parse task id.").parse().unwrap();
+                let id: i32 = modifier_value
+                    .expect("Can't parse task id.")
+                    .parse()
+                    .unwrap();
                 let submodifier_value = args.submodifier.clone();
-                if submodifier_value.is_some() { 
+                if submodifier_value.is_some() {
                     let label_str = submodifier_value.unwrap().to_string();
                     if label_str.starts_with('@') {
                         add_label_to_task(id, root_path, label_str);
                     } else {
                         eprintln!("A label should start with @ and have no spaces in it.");
-
                     }
                 } else {
                     eprintln!("Provide a label to add.");
                 }
-                
             } else {
                 eprintln!("Provide task id to add the label to.");
             }
         } else if args.command == "rm" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
-                let id: i32 = modifier_value.expect("Can't parse task id to remove.").parse().unwrap();
+                let id: i32 = modifier_value
+                    .expect("Can't parse task id to remove.")
+                    .parse()
+                    .unwrap();
                 remove_task(id, root_path);
             }
         } else if args.command == "add" {
@@ -566,16 +590,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if args.command == "mv" {
             let modifier_value = args.modifier.clone();
             if modifier_value.is_some() {
-                let id: i32 = modifier_value.expect("Can't parse task id to move.").parse().unwrap();
-                let submodifier_value = args.submodifier.expect("Please provide a destination file to move the task to.");
+                let id: i32 = modifier_value
+                    .expect("Can't parse task id to move.")
+                    .parse()
+                    .unwrap();
+                let submodifier_value = args
+                    .submodifier
+                    .expect("Please provide a destination file to move the task to.");
                 let dest_fpath = Path::new(&submodifier_value);
                 move_task(id, root_path, dest_fpath);
             }
-            
         } else {
             println!("Unknown command: {}", args.command);
         }
-
     } else {
         println!("You need to create a config at ~/{CONFIG_FNAME} and add GTD_DIR=<rtd_root_dir_absolute_path> there.");
     }
