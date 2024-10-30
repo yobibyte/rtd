@@ -35,6 +35,9 @@ struct Task {
     labels: Vec<String>,
 }
 
+struct TaskStats {
+    max_id: i32,
+}
 //TODO: check if negative ids are properly processed.
 
 fn parse_task(line: &str) -> Option<Task> {
@@ -123,16 +126,13 @@ fn get_file_tasks(fname: &Path, due_only: bool, label: Option<String>) -> Vec<Ta
     for line in reader.lines() {
         let line = line.unwrap();
         if let Some(task) = parse_task(&line) {
-            let mut is_valid = true;
             if due_only && (task.date.is_none() || task.date.clone().unwrap() > speedate_today) {
-                is_valid = false;
+                continue;
             }
             if label.is_some() && !task.labels.contains(&label.clone().unwrap()) {
-                is_valid = false;
+                continue;
             }
-            if is_valid {
-                file_tasks.push(task);
-            }
+            file_tasks.push(task);
         }
     }
     file_tasks
@@ -187,10 +187,6 @@ fn get_all_files(dir: &Path) -> Vec<PathBuf> {
         }
     }
     all_files
-}
-
-struct TaskStats {
-    max_id: i32,
 }
 
 fn initialise(root_path: &Path) -> TaskStats {
