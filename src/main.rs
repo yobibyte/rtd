@@ -27,6 +27,11 @@ struct Cli {
     submodifier: Option<String>,
 }
 
+struct TaskStats {
+    max_id: i32,
+}
+//TODO: check if negative ids are properly processed.
+
 struct Task {
     is_done: bool,
     id: i32,
@@ -35,10 +40,30 @@ struct Task {
     labels: Vec<String>,
 }
 
-struct TaskStats {
-    max_id: i32,
+impl Task {
+    fn to_string(&self) -> String {
+        let mut task_string = String::from(if self.is_done { TASK_DONE } else { TASK_UNDONE });
+
+        task_string.push_str(" &");
+        task_string.push_str(&self.id.to_string());
+        task_string.push(' ');
+        task_string.push_str(&self.title);
+
+        if self.date.is_some() {
+            task_string.push_str(" %");
+            task_string.push_str(&self.date.clone().unwrap().to_string());
+        }
+
+        if !self.labels.is_empty() {
+            for l in self.labels.iter() {
+                // We store labels together with the @ sign.
+                task_string.push(' ');
+                task_string.push_str(l);
+            }
+        }
+        task_string
+    }
 }
-//TODO: check if negative ids are properly processed.
 
 fn parse_task(line: &str) -> Option<Task> {
     if line.starts_with(TASK_DONE) || line.starts_with(TASK_UNDONE) {
@@ -88,31 +113,6 @@ fn parse_task(line: &str) -> Option<Task> {
     }
 }
 
-fn task_to_string(task: &Task) -> String {
-    let status_string = if task.is_done { TASK_DONE } else { TASK_UNDONE };
-    let mut task_string = String::new();
-
-    task_string.push_str(status_string);
-    task_string.push_str(" &");
-    task_string.push_str(&task.id.to_string());
-    task_string.push(' ');
-    task_string.push_str(&task.title);
-
-    if task.date.is_some() {
-        task_string.push_str(" %");
-        task_string.push_str(&task.date.clone().unwrap().to_string());
-    }
-
-    if !task.labels.is_empty() {
-        for l in task.labels.iter() {
-            // We store labels together with the @ sign.
-            task_string.push(' ');
-            task_string.push_str(l);
-        }
-    }
-    task_string
-}
-
 fn today() -> Date {
     let today = Local::now().format("%Y-%m-%d");
     Date::parse_str_rfc3339(&today.to_string()).expect("Can't parse today's date.")
@@ -144,7 +144,7 @@ fn show_file_tasks(fname: &Path, due_only: bool, label: Option<String>) {
         println!("####### {} #######", fname.to_str().expect(""));
     }
     for task in file_tasks {
-        println!("{}", task_to_string(&task));
+        println!("{}", task.to_string());
     }
 }
 
@@ -214,7 +214,7 @@ fn initialise(root_path: &Path) -> TaskStats {
                     stats.max_id += 1;
                 }
                 ids.insert(task.id);
-                writeln!(writer, "{}", task_to_string(&task)).unwrap();
+                writeln!(writer, "{}", task.to_string()).unwrap();
             } else {
                 writeln!(writer, "{}", l).unwrap();
             }
@@ -248,7 +248,7 @@ fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
                 if task.id != task_id {
                     writeln!(writer, "{}", l).unwrap();
                 } else {
-                    println!("{}", task_to_string(&task));
+                    println!("{}", task.to_string());
                     println!(
                         "Task &{} is moved to the list {}",
                         task_id,
@@ -285,9 +285,9 @@ fn remove_task(task_id: i32, root_path: &Path) {
         for l in lines {
             if let Some(task) = parse_task(l) {
                 if task.id != task_id {
-                    writeln!(writer, "{}", task_to_string(&task)).unwrap();
+                    writeln!(writer, "{}", task.to_string()).unwrap();
                 } else {
-                    println!("{}", task_to_string(&task));
+                    println!("{}", task.to_string());
                     println!("Task &{} is removed from the list", task_id);
                     found = true;
                 }
@@ -317,8 +317,8 @@ fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
     task_to_write.id = stats.max_id + 1;
     stats.max_id += 1;
     println!("Added new task to {}:", fpath.to_str().unwrap());
-    println!("{}", task_to_string(&task_to_write));
-    writeln!(writer, "{}", task_to_string(&task_to_write)).unwrap();
+    println!("{}", task_to_write.to_string());
+    writeln!(writer, "{}", task_to_write.to_string()).unwrap();
     for l in lines {
         writeln!(writer, "{}", l).unwrap();
     }
@@ -337,7 +337,7 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
                         task.is_done = !task.is_done;
                         println!("Changed status of the task {}", task_id);
                         println!("Current state:");
-                        println!("{}", task_to_string(&task));
+                        println!("{}", task.to_string());
                     }
                     if toggle_date {
                         if task.date.is_some() {
@@ -347,7 +347,7 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
                         }
                     }
                 }
-                writeln!(writer, "{}", task_to_string(&task)).unwrap();
+                writeln!(writer, "{}", task.to_string()).unwrap();
             } else {
                 writeln!(writer, "{}", l).unwrap();
             }
@@ -375,7 +375,7 @@ fn add_label_to_task(task_id: i32, root_path: &Path, label: String) {
                 if task.id == task_id {
                     task.labels.push(label.clone());
                 }
-                writeln!(writer, "{}", task_to_string(&task)).unwrap();
+                writeln!(writer, "{}", task.to_string()).unwrap();
             } else {
                 writeln!(writer, "{}", l).unwrap();
             }
@@ -413,7 +413,7 @@ fn archive_tasks(root_path: &Path) {
         let mut writer = BufWriter::new(&of);
         for l in lines {
             if let Some(task) = parse_task(l) {
-                let mut task_string = task_to_string(&task);
+                let mut task_string = task.to_string();
                 if task.is_done {
                     task_string.push(' ');
                     task_string.push_str(fpath.to_str().unwrap());
@@ -460,7 +460,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let id = args.command.parse::<i32>().unwrap();
             let task = get_task(id, root_path);
             if task.is_some() {
-                println!("{}", task_to_string(&task.unwrap()))
+                println!("{}", &task.unwrap().to_string())
             }
         } else if args.command == "url" {
             let modifier_value = args.modifier.clone();
@@ -472,7 +472,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let task = get_task(id, root_path);
                 if task.is_some() {
                     let re = Regex::new(r"http://\S+|https://\S+").unwrap();
-                    for cap in re.captures_iter(&task_to_string(&task.unwrap())) {
+                    for cap in re.captures_iter(&(&task.unwrap().to_string())) {
                         println!("{}", &cap[0]);
                     }
                 }
