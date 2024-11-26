@@ -4,6 +4,7 @@ use homedir::get_my_home;
 use regex::Regex;
 use speedate::Date;
 use std::collections::HashSet;
+use std::fmt;
 use std::fs::OpenOptions;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -40,28 +41,22 @@ struct Task {
     labels: Vec<String>,
 }
 
-impl Task {
-    fn to_string(&self) -> String {
-        let mut task_string = String::from(if self.is_done { TASK_DONE } else { TASK_UNDONE });
+impl fmt::Display for Task {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status = if self.is_done { TASK_DONE } else { TASK_UNDONE };
+        write!(f, "{} &{} {}", status, self.id, self.title)?;
 
-        task_string.push_str(" &");
-        task_string.push_str(&self.id.to_string());
-        task_string.push(' ');
-        task_string.push_str(&self.title);
-
-        if self.date.is_some() {
-            task_string.push_str(" %");
-            task_string.push_str(&self.date.clone().unwrap().to_string());
+        if let Some(date) = &self.date {
+            write!(f, " %{}", date.clone())?;
         }
 
         if !self.labels.is_empty() {
             for l in self.labels.iter() {
                 // We store labels together with the @ sign.
-                task_string.push(' ');
-                task_string.push_str(l);
+                write!(f, " {}", l).expect("Failed to write to task_string");
             }
         }
-        task_string
+        Ok(())
     }
 }
 
@@ -472,7 +467,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let task = get_task(id, root_path);
                 if task.is_some() {
                     let re = Regex::new(r"http://\S+|https://\S+").unwrap();
-                    for cap in re.captures_iter(&(&task.unwrap().to_string())) {
+                    for cap in re.captures_iter(&task.unwrap().to_string()) {
                         println!("{}", &cap[0]);
                     }
                 }
