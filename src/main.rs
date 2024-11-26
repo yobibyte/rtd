@@ -139,7 +139,7 @@ fn show_file_tasks(fname: &Path, due_only: bool, label: Option<String>) {
         println!("####### {} #######", fname.to_str().expect(""));
     }
     for task in file_tasks {
-        println!("{}", task.to_string());
+        println!("{}", task);
     }
 }
 
@@ -209,7 +209,7 @@ fn initialise(root_path: &Path) -> TaskStats {
                     stats.max_id += 1;
                 }
                 ids.insert(task.id);
-                writeln!(writer, "{}", task.to_string()).unwrap();
+                writeln!(writer, "{}", task).unwrap();
             } else {
                 writeln!(writer, "{}", l).unwrap();
             }
@@ -243,7 +243,7 @@ fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
                 if task.id != task_id {
                     writeln!(writer, "{}", l).unwrap();
                 } else {
-                    println!("{}", task.to_string());
+                    println!("{}", task);
                     println!(
                         "Task &{} is moved to the list {}",
                         task_id,
@@ -280,9 +280,9 @@ fn remove_task(task_id: i32, root_path: &Path) {
         for l in lines {
             if let Some(task) = parse_task(l) {
                 if task.id != task_id {
-                    writeln!(writer, "{}", task.to_string()).unwrap();
+                    writeln!(writer, "{}", task).unwrap();
                 } else {
-                    println!("{}", task.to_string());
+                    println!("{}", task);
                     println!("Task &{} is removed from the list", task_id);
                     found = true;
                 }
@@ -312,8 +312,8 @@ fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
     task_to_write.id = stats.max_id + 1;
     stats.max_id += 1;
     println!("Added new task to {}:", fpath.to_str().unwrap());
-    println!("{}", task_to_write.to_string());
-    writeln!(writer, "{}", task_to_write.to_string()).unwrap();
+    println!("{}", task_to_write);
+    writeln!(writer, "{}", task_to_write).unwrap();
     for l in lines {
         writeln!(writer, "{}", l).unwrap();
     }
@@ -332,7 +332,7 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
                         task.is_done = !task.is_done;
                         println!("Changed status of the task {}", task_id);
                         println!("Current state:");
-                        println!("{}", task.to_string());
+                        println!("{}", task);
                     }
                     if toggle_date {
                         if task.date.is_some() {
@@ -342,7 +342,7 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
                         }
                     }
                 }
-                writeln!(writer, "{}", task.to_string()).unwrap();
+                writeln!(writer, "{}", task).unwrap();
             } else {
                 writeln!(writer, "{}", l).unwrap();
             }
@@ -370,7 +370,7 @@ fn add_label_to_task(task_id: i32, root_path: &Path, label: String) {
                 if task.id == task_id {
                     task.labels.push(label.clone());
                 }
-                writeln!(writer, "{}", task.to_string()).unwrap();
+                writeln!(writer, "{}", task).unwrap();
             } else {
                 writeln!(writer, "{}", l).unwrap();
             }
