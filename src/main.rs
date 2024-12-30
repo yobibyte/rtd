@@ -319,7 +319,16 @@ fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
     }
 }
 
-fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date: bool) {
+// TODO: keep a hashmap of the file/ids
+// when initialising, and use this to find a file to write to.
+// These two are complementary to each other.
+fn modify_task(
+    task_id: i32,
+    root_path: &Path,
+    label_to_add: Option<String>,
+    toggle_status: bool,
+    toggle_date: bool,
+) {
     for fpath in get_all_files(root_path) {
         let content = fs::read_to_string(&fpath).expect("Can't read the file");
         let lines: Vec<_> = content.lines().collect();
@@ -328,6 +337,11 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
         for l in lines {
             if let Some(mut task) = parse_task(l) {
                 if task.id == task_id {
+                    // This branch is doing all the modifications.
+                    // If the argument is Some, update the task with it.
+                    if let Some(label) = label_to_add.clone() {
+                        task.labels.push(label);
+                    }
                     if toggle_status {
                         task.is_done = !task.is_done;
                         println!("Changed status of the task {}", task_id);
@@ -348,36 +362,6 @@ fn toggle_task(task_id: i32, root_path: &Path, toggle_status: bool, toggle_date:
             }
         }
     }
-    // todo: optimise and quit when found a task
-    // print if task was not found
-}
-
-// TODO: make a general 'modify_task' function that takes
-// options for each of the task fields.
-// This will allow to get rid of all the similar functions
-// that iterate over files and find one id.
-// Another thing to do will be to keep a hashmap of the file/ids
-// when initialising, and use this to find a file to write to.
-// These two are complementary to each other.
-fn add_label_to_task(task_id: i32, root_path: &Path, label: String) {
-    for fpath in get_all_files(root_path) {
-        let content = fs::read_to_string(&fpath).expect("Can't read the file");
-        let lines: Vec<_> = content.lines().collect();
-        let of = File::create(fpath).unwrap();
-        let mut writer = BufWriter::new(&of);
-        for l in lines {
-            if let Some(mut task) = parse_task(l) {
-                if task.id == task_id {
-                    task.labels.push(label.clone());
-                }
-                writeln!(writer, "{}", task).unwrap();
-            } else {
-                writeln!(writer, "{}", l).unwrap();
-            }
-        }
-    }
-    // todo: optimise and quit when found a task
-    // print if task was not found
 }
 
 fn get_task(task_id: i32, root_path: &Path) -> Option<Task> {
@@ -527,9 +511,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .parse()
                     .unwrap();
                 if args.command == "toggle" {
-                    toggle_task(id, root_path, true, false);
+                    modify_task(id, root_path, None, true, false);
                 } else if args.command == "td" {
-                    toggle_task(id, root_path, false, true);
+                    modify_task(id, root_path, None, false, true);
                 }
             }
         } else if args.command == "al" {
@@ -543,7 +527,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if submodifier_value.is_some() {
                     let label_str = submodifier_value.unwrap().to_string();
                     if label_str.starts_with('@') {
-                        add_label_to_task(id, root_path, label_str);
+                        modify_task(id, root_path, Some(label_str), false, false);
                     } else {
                         eprintln!("A label should start with @ and have no spaces in it.");
                     }
