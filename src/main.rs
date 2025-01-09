@@ -16,8 +16,7 @@ const RTD_ROOT_VAR_NAME: &str = "RTD_ROOT";
 const TASK_UNDONE: &str = "- [ ]";
 const TASK_DONE: &str = "- [x]";
 const DONE_TASKS_FNAME: &str = ".done";
-// SERVICE_FNAMES files will be ignored
-// when iterating over files.
+// SERVICE_FNAMES files will be ignored when iterating over files.
 // They are used by rtd for bookkeeping.
 const SERVICE_FNAMES: [&str; 1] = [DONE_TASKS_FNAME];
 
