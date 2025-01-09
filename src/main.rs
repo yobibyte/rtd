@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use homedir::get_my_home;
 use regex::Regex;
 use speedate::Date;
@@ -22,10 +22,52 @@ const DONE_TASKS_FNAME: &str = ".done";
 const SERVICE_FNAMES: [&str; 1] = [DONE_TASKS_FNAME];
 
 #[derive(Parser)]
+#[command(subcommand_required = false, arg_required_else_help = false)]
 struct Cli {
-    command: String,
-    modifier: Option<String>,
-    submodifier: Option<String>,
+    #[command(subcommand)]
+    command: Option<SubcommandEnum>,
+    /// This can be a task id, @label or a project (e.g. file.md).
+    global_modifier: Option<String>,
+}
+
+#[derive(Debug, Subcommand)]
+enum SubcommandEnum {
+    ///Show inbox.
+    #[command(visible_alias = "i")]
+    Inbox,
+    /// Show all tasks in the workspace.
+    #[command(visible_alias = "a")]
+    All,
+    /// Show due tasks.
+    Due,
+    ///Print an URL if a task description has one. Provide task id.
+    Url { task_id: i32 },
+    ///Remove task. Provide task id.
+    Rm { task_id: i32 },
+    ///Print out a list of all projects.
+    List,
+    ///Show all labels.
+    Labels,
+    ///Add a task. <task_description> <project>. If project not provided, adding to inbox. Task
+    ///description can have a date (starts with %), and labels (each starts with @, no spaces
+    ///allowed).
+    Add {
+        task_description: String,
+        project: Option<String>,
+    },
+    ///Add a label to a task. <task_id> <label>. Label starts with @.
+    #[command(visible_alias = "al")]
+    AddLabel { task_id: i32, label: String },
+    ///Move a task to a project: <task_id> <project>.
+    Mv { task_id: i32, project: String },
+    ///Move done tasks to archive.
+    Archive,
+    ///Toggle task status (done -> undone, undone -> done).
+    #[command(visible_alias = "t")]
+    Toggle { task_id: i32 },
+    ///Toggle task date (change for today!)
+    #[command(visible_alias = "td")]
+    ToggleDate { task_id: i32 },
 }
 
 struct TaskStats {
@@ -431,152 +473,117 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Initialisation ends
 
         let args = Cli::parse();
-        let maybe_path = root_path.join(args.command.clone());
-
-        if args.command == "debug" {
-            println!("Using rtd root: {rtd_root}.");
-        } else if args.command.parse::<i32>().is_ok() {
-            let id = args.command.parse::<i32>().unwrap();
-            let task = get_task(id, root_path);
-            if task.is_some() {
-                println!("{}", &task.unwrap().to_string())
-            }
-        } else if args.command == "url" {
-            let modifier_value = args.modifier.clone();
-            if modifier_value.is_some() {
-                let id = modifier_value
-                    .unwrap()
-                    .parse::<i32>()
-                    .expect("Provide task id for the url command.");
-                let task = get_task(id, root_path);
-                if task.is_some() {
-                    let re = Regex::new(r"http://\S+|https://\S+").unwrap();
-                    for cap in re.captures_iter(&task.unwrap().to_string()) {
-                        println!("{}", &cap[0]);
+        match args.command {
+            Some(subcommand) => match subcommand {
+                SubcommandEnum::All => {
+                    for fpath in get_all_files(root_path) {
+                        show_file_tasks(&fpath, false, None);
                     }
                 }
-            }
-        } else if args.command == "list" {
-            let root_path_str = root_path.to_str().unwrap().to_string();
-            println!("All gtd projects:");
-            for fpath in get_all_files(root_path) {
-                println!(
-                    "{}",
-                    fpath
-                        .to_str()
-                        .expect("")
-                        .strip_prefix(&root_path_str)
-                        .unwrap()
-                );
-            }
-
-        //TODO: Check files for keywords and throw an error
-        // if there are folders with names due/labels etc.
-        } else if args.command == "labels" {
-            let mut all_labels: HashSet<String> = HashSet::new();
-            for fpath in get_all_files(root_path) {
-                all_labels.extend(get_file_labels(&fpath));
-            }
-            for l in all_labels {
-                println!("{l}");
-            }
-        } else if args.command.starts_with('@') {
-            for fpath in get_all_files(root_path) {
-                show_file_tasks(&fpath, false, Some(args.command.clone()));
-            }
-        } else if maybe_path.exists() {
-            // When we are here, we either get a folder name, or a file name.
-            if maybe_path.clone().to_str().unwrap().ends_with(".md") {
-                show_file_tasks(&maybe_path, false, None);
-            } else {
-                for fpath in get_all_files(&maybe_path) {
-                    show_file_tasks(&fpath, false, None);
+                SubcommandEnum::Inbox => {
+                    show_file_tasks(&inbox_path, false, None);
                 }
-            }
-        } else if args.command == "inbox" || args.command == "i" {
-            show_file_tasks(&inbox_path, false, None);
-        } else if args.command == "due" {
-            for fpath in get_all_files(root_path) {
-                show_file_tasks(&fpath, true, None);
-            }
-        } else if args.command == "all" {
-            for fpath in get_all_files(root_path) {
-                show_file_tasks(&fpath, false, None);
-            }
-        } else if args.command == "toggle" || args.command == "td" {
-            let modifier_value = args.modifier.clone();
-            if modifier_value.is_some() {
-                let id: i32 = modifier_value
-                    .expect("Can't parse task id.")
-                    .parse()
-                    .unwrap();
-                if args.command == "toggle" {
-                    modify_task(id, root_path, None, true, false);
-                } else if args.command == "td" {
-                    modify_task(id, root_path, None, false, true);
+                SubcommandEnum::Due => {
+                    for fpath in get_all_files(root_path) {
+                        show_file_tasks(&fpath, true, None);
+                    }
                 }
-            }
-        } else if args.command == "al" {
-            let modifier_value = args.modifier.clone();
-            if modifier_value.is_some() {
-                let id: i32 = modifier_value
-                    .expect("Can't parse task id.")
-                    .parse()
-                    .unwrap();
-                let submodifier_value = args.submodifier.clone();
-                if submodifier_value.is_some() {
-                    let label_str = submodifier_value.unwrap().to_string();
-                    if label_str.starts_with('@') {
-                        modify_task(id, root_path, Some(label_str), false, false);
+                SubcommandEnum::Archive => {
+                    archive_tasks(root_path);
+                    println!("All tasks archived (moved to .done)");
+                }
+                SubcommandEnum::Labels => {
+                    let mut all_labels: HashSet<String> = HashSet::new();
+                    for fpath in get_all_files(root_path) {
+                        all_labels.extend(get_file_labels(&fpath));
+                    }
+                    for l in all_labels {
+                        println!("{l}");
+                    }
+                }
+                SubcommandEnum::List => {
+                    let root_path_str = root_path.to_str().unwrap().to_string();
+                    for fpath in get_all_files(root_path) {
+                        println!(
+                            "{}",
+                            fpath
+                                .to_str()
+                                .expect("")
+                                .strip_prefix(&root_path_str)
+                                .unwrap()
+                        );
+                    }
+                }
+                SubcommandEnum::Url { task_id } => {
+                    let task = get_task(task_id, root_path);
+                    if task.is_some() {
+                        let re = Regex::new(r"http://\S+|https://\S+").unwrap();
+                        for cap in re.captures_iter(&task.unwrap().to_string()) {
+                            println!("{}", &cap[0]);
+                        }
+                    }
+                }
+                SubcommandEnum::Rm { task_id } => remove_task(task_id, root_path),
+                SubcommandEnum::Toggle { task_id } => {
+                    modify_task(task_id, root_path, None, true, false)
+                }
+                SubcommandEnum::ToggleDate { task_id } => {
+                    modify_task(task_id, root_path, None, false, true)
+                }
+                SubcommandEnum::Add {
+                    task_description,
+                    project,
+                } => {
+                    let project_path = match project {
+                        Some(project) => root_path.join(&project),
+                        None => root_path.join(&inbox_path),
+                    };
+                    add_task(&task_description, &project_path, root_stats);
+                }
+                SubcommandEnum::Mv { task_id, project } => {
+                    move_task(task_id, root_path, Path::new(&project))
+                }
+                SubcommandEnum::AddLabel { task_id, label } => {
+                    if label.starts_with('@') {
+                        modify_task(task_id, root_path, Some(label), false, false);
                     } else {
                         eprintln!("A label should start with @ and have no spaces in it.");
                     }
-                } else {
-                    eprintln!("Provide a label to add.");
                 }
-            } else {
-                eprintln!("Provide task id to add the label to.");
-            }
-        } else if args.command == "rm" {
-            let modifier_value = args.modifier.clone();
-            if modifier_value.is_some() {
-                let id: i32 = modifier_value
-                    .expect("Can't parse task id to remove.")
-                    .parse()
-                    .unwrap();
-                remove_task(id, root_path);
-            }
-        } else if args.command == "add" {
-            let modifier_value = args.modifier.clone();
-            if modifier_value.is_some() {
-                let submodifier_value = args.submodifier.clone();
-                if submodifier_value.is_some() {
-                    let fpath = root_path.join(submodifier_value.unwrap());
-                    add_task(&modifier_value.unwrap(), &fpath, root_stats);
-                } else {
-                    add_task(&modifier_value.unwrap(), &inbox_path, root_stats);
+            },
+            None => match args.global_modifier {
+                Some(modifier) => {
+                    let maybe_path = root_path.join(modifier.clone());
+                    if let Ok(id) = modifier.parse::<i32>() {
+                        let task = get_task(id, root_path);
+                        if task.is_some() {
+                            println!("{}", &task.unwrap().to_string())
+                        }
+                    } else if modifier.starts_with('@') {
+                        for fpath in get_all_files(root_path) {
+                            show_file_tasks(&fpath, false, Some(modifier.clone()));
+                        }
+                    //TODO: Check files for keywords and throw an error
+                    // if there are folders with names due/labels etc.
+                    } else if maybe_path.exists() {
+                        // When we are here, we either get a folder name, or a file name.
+                        if maybe_path.clone().to_str().unwrap().ends_with(".md") {
+                            show_file_tasks(&maybe_path, false, None);
+                        } else {
+                            for fpath in get_all_files(&maybe_path) {
+                                show_file_tasks(&fpath, false, None);
+                            }
+                        }
+                    } else {
+                        println!("Unknown modifier: {}", modifier);
+                    }
                 }
-            } else {
-                println!("Specify a task to add!");
-            }
-        } else if args.command == "archive" {
-            archive_tasks(root_path);
-            println!("All tasks archived (moved to .done)");
-        } else if args.command == "mv" {
-            let modifier_value = args.modifier.clone();
-            if modifier_value.is_some() {
-                let id: i32 = modifier_value
-                    .expect("Can't parse task id to move.")
-                    .parse()
-                    .unwrap();
-                let submodifier_value = args
-                    .submodifier
-                    .expect("Please provide a destination file to move the task to.");
-                let dest_fpath = Path::new(&submodifier_value);
-                move_task(id, root_path, dest_fpath);
-            }
-        } else {
-            println!("Unknown command: {}", args.command);
+                None => {
+                    for fpath in get_all_files(root_path) {
+                        show_file_tasks(&fpath, false, None);
+                    }
+                }
+            },
         }
     } else {
         println!("You need to create a config at ~/{CONFIG_FNAME} and add GTD_DIR=<rtd_root_dir_absolute_path> there.");
