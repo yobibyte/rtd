@@ -304,7 +304,6 @@ fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
         if found {
             break;
         }
-        //Do I need to close the files in rust?
     }
     if !found {
         println!("Task &{} is not in any of your files", task_id);
