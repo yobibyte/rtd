@@ -359,9 +359,6 @@ fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
     }
 }
 
-// TODO: keep a hashmap of the file/ids
-// when initialising, and use this to find a file to write to.
-// These two are complementary to each other.
 fn modify_task(
     task_id: i32,
     root_path: &Path,
