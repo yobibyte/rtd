@@ -1,10 +1,10 @@
 use chrono::prelude::*;
 use clap::{Parser, Subcommand};
-use homedir::get_my_home;
 use regex::Regex;
 use speedate::Date;
 use std::collections::HashSet;
 use std::fmt;
+use std::env;
 use std::fs::OpenOptions;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -446,7 +446,7 @@ fn archive_tasks(root_path: &Path) {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // I have no idea what's going on and why we need to unwrap twice.
     // I am also surprised that to get your home directory, you need a crate.
-    let config_path = get_my_home().unwrap().unwrap();
+    let config_path = env::home_dir().expect("I need a $HOME to operate.");
     if config_path.exists() {
         // Initialisation starts
         // When config grows, we'll need to read file line by line.
