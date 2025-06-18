@@ -3,8 +3,8 @@ use clap::{Parser, Subcommand};
 use regex::Regex;
 use speedate::Date;
 use std::collections::HashSet;
-use std::fmt;
 use std::env;
+use std::fmt;
 use std::fs::OpenOptions;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -94,7 +94,7 @@ impl fmt::Display for Task {
         if !self.labels.is_empty() {
             for l in self.labels.iter() {
                 // We store labels together with the @ sign.
-                write!(f, " {}", l).expect("Failed to write to task_string");
+                write!(f, " {l}").expect("Failed to write to task_string");
             }
         }
         Ok(())
@@ -180,7 +180,7 @@ fn show_file_tasks(fname: &Path, due_only: bool, label: Option<String>) {
         println!("####### {} #######", fname.to_str().expect(""));
     }
     for task in file_tasks {
-        println!("{}", task);
+        println!("{task}");
     }
 }
 
@@ -250,9 +250,9 @@ fn initialise(root_path: &Path) -> TaskStats {
                     stats.max_id += 1;
                 }
                 ids.insert(task.id);
-                writeln!(writer, "{}", task).unwrap();
+                writeln!(writer, "{task}").unwrap();
             } else {
-                writeln!(writer, "{}", l).unwrap();
+                writeln!(writer, "{l}").unwrap();
             }
         }
     }
@@ -282,9 +282,9 @@ fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
         for l in lines {
             if let Some(task) = parse_task(l) {
                 if task.id != task_id {
-                    writeln!(writer, "{}", l).unwrap();
+                    writeln!(writer, "{l}").unwrap();
                 } else {
-                    println!("{}", task);
+                    println!("{task}");
                     println!(
                         "Task &{} is moved to the list {}",
                         task_id,
@@ -298,7 +298,7 @@ fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
                     found = true;
                 }
             } else {
-                writeln!(writer, "{}", l).unwrap();
+                writeln!(writer, "{l}").unwrap();
             }
         }
         if found {
@@ -306,7 +306,7 @@ fn move_task(task_id: i32, root_path: &Path, dest_fpath: &Path) {
         }
     }
     if !found {
-        println!("Task &{} is not in any of your files", task_id);
+        println!("Task &{task_id} is not in any of your files");
     };
 }
 
@@ -320,14 +320,14 @@ fn remove_task(task_id: i32, root_path: &Path) {
         for l in lines {
             if let Some(task) = parse_task(l) {
                 if task.id != task_id {
-                    writeln!(writer, "{}", task).unwrap();
+                    writeln!(writer, "{task}").unwrap();
                 } else {
-                    println!("{}", task);
-                    println!("Task &{} is removed from the list", task_id);
+                    println!("{task}");
+                    println!("Task &{task_id} is removed from the list");
                     found = true;
                 }
             } else {
-                writeln!(writer, "{}", l).unwrap();
+                writeln!(writer, "{l}").unwrap();
             }
         }
         if found {
@@ -335,7 +335,7 @@ fn remove_task(task_id: i32, root_path: &Path) {
         }
     }
     if !found {
-        println!("Task &{} is not in any of your files", task_id);
+        println!("Task &{task_id} is not in any of your files");
     };
 }
 
@@ -352,10 +352,10 @@ fn add_task(task_str: &str, fpath: &Path, mut stats: TaskStats) {
     task_to_write.id = stats.max_id + 1;
     stats.max_id += 1;
     println!("Added new task to {}:", fpath.to_str().unwrap());
-    println!("{}", task_to_write);
-    writeln!(writer, "{}", task_to_write).unwrap();
+    println!("{task_to_write}");
+    writeln!(writer, "{task_to_write}").unwrap();
     for l in lines {
-        writeln!(writer, "{}", l).unwrap();
+        writeln!(writer, "{l}").unwrap();
     }
 }
 
@@ -381,9 +381,9 @@ fn modify_task(
                     }
                     if toggle_status {
                         task.is_done = !task.is_done;
-                        println!("Changed status of the task {}", task_id);
+                        println!("Changed status of the task {task_id}");
                         println!("Current state:");
-                        println!("{}", task);
+                        println!("{task}");
                     }
                     if toggle_date {
                         if task.date.is_some() {
@@ -393,9 +393,9 @@ fn modify_task(
                         }
                     }
                 }
-                writeln!(writer, "{}", task).unwrap();
+                writeln!(writer, "{task}").unwrap();
             } else {
-                writeln!(writer, "{}", l).unwrap();
+                writeln!(writer, "{l}").unwrap();
             }
         }
     }
@@ -438,7 +438,7 @@ fn archive_tasks(root_path: &Path) {
                     writeln!(writer, "{task_string}").unwrap();
                 }
             } else {
-                writeln!(writer, "{}", l).unwrap();
+                writeln!(writer, "{l}").unwrap();
             }
         }
     }
@@ -570,7 +570,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     } else {
-                        println!("Unknown modifier: {}", modifier);
+                        println!("Unknown modifier: {modifier}");
                     }
                 }
                 None => {
